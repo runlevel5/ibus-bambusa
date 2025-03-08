@@ -2,6 +2,7 @@
 //! Vietnamese text for a chosen input method (Telex, VNI, VIQR and variants).
 
 mod mode;
+mod parser;
 mod rules;
 mod unicode_tables;
 
