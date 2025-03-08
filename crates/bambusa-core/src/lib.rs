@@ -5,6 +5,7 @@ mod input_method;
 mod mode;
 mod parser;
 mod rules;
+mod spelling;
 mod unicode_tables;
 
 pub use input_method::{input_method_names, parse_input_method, InputMethod};
