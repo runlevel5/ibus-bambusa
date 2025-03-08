@@ -1,8 +1,5 @@
 //! Parsing of the input-method rule DSL into [`Rule`] lists.
 
-// Consumed by the input-method builder landing next; drop once that lands.
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
