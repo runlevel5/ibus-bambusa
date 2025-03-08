@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/bambusa-core",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+authors = ["Trung Lê <8@tle.id.au>"]
+repository = "https://github.com/runlevel5/ibus-bambusa"
+
+[workspace.dependencies]
+bitflags = "2.9"
+regex = "1.11"
