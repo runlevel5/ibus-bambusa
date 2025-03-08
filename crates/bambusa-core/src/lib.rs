@@ -3,6 +3,7 @@
 
 mod mode;
 mod rules;
+mod unicode_tables;
 
 pub use mode::{EngineFlags, Mode};
 pub use rules::{EffectType, Mark, Rule, Tone};
