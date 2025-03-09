@@ -154,6 +154,11 @@ pub(crate) fn to_lower(chr: char) -> char {
     chr.to_lowercase().next().unwrap_or(chr)
 }
 
+/// Uppercase a single character, taking the first resulting character.
+pub(crate) fn to_upper(chr: char) -> char {
+    chr.to_uppercase().next().unwrap_or(chr)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
