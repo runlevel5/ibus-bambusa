@@ -14,7 +14,7 @@ pub(crate) fn flatten(composition: &[Transformation], mode: Mode) -> String {
     canvas(composition, mode).into_iter().collect()
 }
 
-fn canvas(composition: &[Transformation], mode: Mode) -> Vec<char> {
+pub(crate) fn canvas(composition: &[Transformation], mode: Mode) -> Vec<char> {
     let english = mode.contains(Mode::ENGLISH);
 
     // Appending transformations carry the output characters; every other
