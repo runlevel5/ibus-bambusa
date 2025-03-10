@@ -1,0 +1,54 @@
+# ibus-bambusa
+
+A simple, opinionated Vietnamese input method for **GNOME (Wayland only)**.
+
+`ibus-bambusa` is an [IBus](https://github.com/ibus/ibus) engine that turns
+keystrokes into Vietnamese text — Telex, VNI, VIQR and the usual variants.
+
+## Opinions
+
+This project deliberately keeps a narrow scope. It does only what GNOME on
+Wayland supports well, and nothing else:
+
+- **Wayland only**, targeting what GNOME actually supports. No X11, no
+  `XTest` key faking, no X11 clipboard or window introspection.
+- **One global input mode**, switched manually. No per-application mode
+  detection (GNOME no longer exposes the focused window to do this safely).
+- **Unicode output** to start with; the encoder keeps room for the legacy
+  Vietnamese charsets later.
+- **No GUI.** Configuration lives in a config file and the IBus property menu.
+
+If you need the full feature set (X11, every charset, the emoji picker, a
+settings GUI), use the original [ibus-bamboo](https://github.com/BambooEngine/ibus-bamboo).
+
+## Credits
+
+The Vietnamese composition logic is a direct port of the excellent
+[BambooEngine](https://github.com/BambooEngine) projects:
+
+- [`bamboo-core`](https://github.com/BambooEngine/bamboo-core) — the
+  composition algorithm (tone/mark placement, spelling rules, input methods).
+- [`ibus-bamboo`](https://github.com/BambooEngine/ibus-bamboo) — the IBus
+  engine behaviour this project follows.
+
+The port aims to match their behaviour closely; the upstream test corpus is
+re-run against this implementation.
+
+## Layout
+
+This is a Cargo workspace:
+
+| Crate | What it is |
+|-------|------------|
+| `bambusa-core` | The composition engine: keystrokes → Vietnamese text. Pure, no I/O. |
+| `ibus-zbus` *(planned)* | Engine-side IBus binding on zbus. |
+| `ibus-bambusa` *(planned)* | The IBus engine binary. |
+
+## Building
+
+Requires Rust 1.85.0 (pinned via `rust-toolchain.toml`).
+
+```sh
+cargo build
+cargo test
+```
