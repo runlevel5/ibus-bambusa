@@ -1,9 +1,6 @@
 //! Vietnamese phonotactic validation: whether a (first-consonant, vowel,
 //! last-consonant) decomposition forms a spellable syllable.
 
-// Consumed by the transformation engine landing next; drop once that lands.
-#![allow(dead_code)]
-
 use crate::unicode_tables::add_mark_to_toneless_char;
 
 /// Initial consonant clusters, grouped into compatibility classes.

@@ -1,7 +1,5 @@
 //! Reconstructing displayable text from a composition.
 
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
 use crate::mode::Mode;

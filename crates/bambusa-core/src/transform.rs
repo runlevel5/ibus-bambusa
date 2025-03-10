@@ -1,10 +1,6 @@
 //! The composition: an ordered list of [`Transformation`]s and the machinery
 //! that builds and edits it from keystrokes.
 
-// Several functions are consumed only by the engine glue landing next; drop
-// once that lands.
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -58,7 +54,7 @@ pub(crate) fn matches_uoh_tail(s: &str) -> bool {
     REG_UOH_TAIL.is_match(s)
 }
 
-fn by_id(comp: &[Transformation], id: TransId) -> Option<&Transformation> {
+pub(crate) fn by_id(comp: &[Transformation], id: TransId) -> Option<&Transformation> {
     comp.iter().find(|t| t.id == id)
 }
 

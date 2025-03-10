@@ -1,10 +1,6 @@
 //! Vietnamese character tables and the tone/mark arithmetic that operates on
 //! individual characters.
 
-// Consumed incrementally by the rule parser and the transformation engine;
-// drop once those modules land.
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -140,11 +136,13 @@ pub(crate) fn is_vietnamese_rune(lower_key: char) -> bool {
     lower_key != add_mark_to_toneless_char(lower_key, 0)
 }
 
-pub(crate) fn has_any_vietnamese_rune(word: &str) -> bool {
+/// Whether `word` contains any Vietnamese-specific character.
+pub fn has_any_vietnamese_rune(word: &str) -> bool {
     word.chars().any(|chr| is_vietnamese_rune(to_lower(chr)))
 }
 
-pub(crate) fn has_any_vietnamese_vowel(word: &str) -> bool {
+/// Whether `word` contains any Vietnamese vowel.
+pub fn has_any_vietnamese_vowel(word: &str) -> bool {
     word.chars().any(|chr| is_vowel(to_lower(chr)))
 }
 
