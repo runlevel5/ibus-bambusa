@@ -208,4 +208,32 @@ mod tests {
         assert!(can_process_key('a', &[]));
         assert!(!can_process_key('5', &[]));
     }
+
+    #[test]
+    fn every_vowel_is_a_vowel() {
+        assert!(is_vowel('a'));
+        assert!(is_vowel('á'));
+        assert!(!is_vowel('b'));
+        for v in VOWELS.iter() {
+            assert!(is_vowel(*v), "{v} should be a vowel");
+        }
+    }
+
+    #[test]
+    fn tone_from_char_each_tone() {
+        assert_eq!(find_tone_from_char('e'), Tone::None);
+        assert_eq!(find_tone_from_char('è'), Tone::Grave);
+        assert_eq!(find_tone_from_char('é'), Tone::Acute);
+        assert_eq!(find_tone_from_char('ẽ'), Tone::Tilde);
+        assert_eq!(find_tone_from_char('ẻ'), Tone::Hook);
+        assert_eq!(find_tone_from_char('ạ'), Tone::Dot);
+    }
+
+    #[test]
+    fn tone_and_mark_identities() {
+        assert_eq!(add_tone_to_char('a', Tone::Dot as u8), 'ạ');
+        assert_eq!(add_tone_to_char('y', 0), 'y');
+        assert_eq!(add_mark_to_char('y', 0), 'y');
+        assert_eq!(add_mark_to_char('ạ', Mark::Breve as u8), 'ặ');
+    }
 }

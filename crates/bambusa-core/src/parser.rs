@@ -180,4 +180,67 @@ mod tests {
             .iter()
             .any(|r| r.effect_on == 'u' && r.result == 'ư' && r.mark() == Mark::Horn));
     }
+
+    #[test]
+    fn tone_rules() {
+        let rules = parse_rules('z', "XoáDấuThanh");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].effect_type, EffectType::ToneTransformation);
+        assert_eq!(rules[0].tone(), Tone::None);
+
+        let rules = parse_rules('x', "DấuNgã");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].effect_type, EffectType::ToneTransformation);
+        assert_eq!(rules[0].tone(), Tone::Tilde);
+    }
+
+    #[test]
+    fn toneless_dd_and_append() {
+        let rules = parse_toneless_rules('d', "D_Đ");
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].effect_type, EffectType::MarkTransformation);
+        assert_eq!(rules[0].mark(), Mark::Dash);
+        assert_eq!(rules[0].effect_on, 'd');
+
+        let rules = parse_toneless_rules('{', "_Ư");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].effect_type, EffectType::Appending);
+        assert_eq!(rules[0].effect_on, 'Ư');
+    }
+
+    #[test]
+    fn uoa_rule_layout() {
+        let rules = parse_toneless_rules('w', "UOA_ƯƠĂ");
+        assert_eq!(rules.len(), 33);
+        assert_eq!(rules[0].mark(), Mark::Horn);
+        assert_eq!(rules[0].effect_on, 'u');
+        assert_eq!(rules[7].mark(), Mark::Horn);
+        assert_eq!(rules[7].effect_on, 'o');
+        assert_eq!(rules[20].mark(), Mark::Breve);
+        assert_eq!(rules[20].effect_on, 'a');
+
+        let rules = parse_toneless_rules('w', "UOA_ƯƠĂ__Ư");
+        assert_eq!(rules.len(), 34);
+        assert_eq!(rules[20].mark(), Mark::Breve);
+        assert_eq!(rules[20].effect_on, 'a');
+        assert_eq!(rules[33].effect_type, EffectType::Appending);
+        assert_eq!(rules[33].effect_on, 'ư');
+    }
+
+    #[test]
+    fn nested_appended_rules() {
+        let rules = parse_toneless_rules('[', "__ươ");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].appended_rules.len(), 1);
+        assert_eq!(
+            rules[0].appended_rules[0].effect_type,
+            EffectType::Appending
+        );
+        assert_eq!(rules[0].appended_rules[0].effect_on, 'ơ');
+
+        let rules = parse_toneless_rules('{', "__ƯƠ");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].appended_rules.len(), 1);
+        assert_eq!(rules[0].appended_rules[0].effect_on, 'Ơ');
+    }
 }
