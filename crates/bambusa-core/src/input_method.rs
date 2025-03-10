@@ -216,18 +216,23 @@ pub fn input_method_names() -> Vec<&'static str> {
     DEFINITIONS.iter().map(|(name, _)| *name).collect()
 }
 
-/// Compile the named input method, or `None` if it is not built in.
+/// Compile the named built-in input method, or `None` if it is not built in.
 pub fn parse_input_method(name: &str) -> Option<InputMethod> {
     let pairs = DEFINITIONS.iter().find(|(n, _)| *n == name)?.1;
-    Some(build(name, pairs))
+    Some(build_input_method(name, pairs))
 }
 
-fn build(name: &str, pairs: &[(&str, &str)]) -> InputMethod {
+/// Compile an arbitrary input-method definition into an [`InputMethod`].
+///
+/// `definition` is a list of `(key, rule-line)` pairs in the same DSL the
+/// built-in layouts use, letting callers build user-defined layouts loaded
+/// from configuration.
+pub fn build_input_method(name: &str, definition: &[(&str, &str)]) -> InputMethod {
     let mut im = InputMethod {
         name: name.to_string(),
         ..Default::default()
     };
-    for (key_str, line) in pairs {
+    for (key_str, line) in definition {
         let key = key_str.chars().next().expect("definition key is non-empty");
         im.rules.extend(parse_rules(key, line));
         if line.to_lowercase().contains("uo") {
@@ -279,5 +284,15 @@ mod tests {
     #[test]
     fn unknown_layout_is_none() {
         assert!(parse_input_method("Bogus").is_none());
+    }
+
+    #[test]
+    fn custom_definition_builds() {
+        // A user-defined layout assembled from raw definition lines.
+        let im = build_input_method("Custom", &[("s", "DấuSắc"), ("a", "A_Â")]);
+        assert_eq!(im.name, "Custom");
+        assert!(im.tone_keys.contains(&'s'));
+        assert!(im.keys.contains(&'a'));
+        assert!(im.super_keys.is_empty());
     }
 }
