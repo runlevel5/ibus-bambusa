@@ -14,8 +14,8 @@ Wayland supports well, and nothing else:
   `XTest` key faking, no X11 clipboard or window introspection.
 - **One global input mode**, switched manually. No per-application mode
   detection (GNOME no longer exposes the focused window to do this safely).
-- **Unicode output** to start with; the encoder keeps room for the legacy
-  Vietnamese charsets later.
+- **Full charset output**: Unicode plus the legacy Vietnamese encodings
+  (TCVN3, VNI-Win, VIQR, VISCII, VPS, BK HCM, Vietware, NCR, …).
 - **No GUI.** Configuration lives in a config file and the IBus property menu.
 
 If you need the full feature set (X11, every charset, the emoji picker, a
