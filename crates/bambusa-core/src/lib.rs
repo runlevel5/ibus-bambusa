@@ -13,7 +13,7 @@ mod transform;
 mod unicode_tables;
 
 pub use encoder::{charset_names, encode};
-pub use engine::BambooEngine;
+pub use engine::BambusaEngine;
 pub use input_method::{build_input_method, input_method_names, parse_input_method, InputMethod};
 pub use mode::{EngineFlags, Mode};
 pub use rules::{EffectType, Mark, Rule, Tone};

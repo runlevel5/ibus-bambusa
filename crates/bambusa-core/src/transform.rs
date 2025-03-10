@@ -715,7 +715,7 @@ mod tests {
                 .cloned()
                 .collect();
 
-            // Mirror BambooEngine::new_composition for the last syllable.
+            // Mirror BambusaEngine::new_composition for the last syllable.
             let syl_split = extract_last_syllable(&comp);
             let previous = comp[..syl_split].to_vec();
             let mut syllable = comp[syl_split..].to_vec();

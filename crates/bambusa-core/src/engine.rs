@@ -15,14 +15,14 @@ use crate::unicode_tables::{can_process_key, to_lower};
 
 /// Composes Vietnamese text from a stream of keystrokes for one input method.
 #[derive(Debug)]
-pub struct BambooEngine {
+pub struct BambusaEngine {
     composition: Vec<Transformation>,
     input_method: InputMethod,
     flags: EngineFlags,
     ids: IdGen,
 }
 
-impl BambooEngine {
+impl BambusaEngine {
     pub fn new(input_method: InputMethod, flags: EngineFlags) -> Self {
         Self {
             composition: Vec::new(),
@@ -258,8 +258,8 @@ mod tests {
     use super::*;
     use crate::input_method::parse_input_method;
 
-    fn engine(im: &str) -> BambooEngine {
-        BambooEngine::new(parse_input_method(im).unwrap(), EngineFlags::STD)
+    fn engine(im: &str) -> BambusaEngine {
+        BambusaEngine::new(parse_input_method(im).unwrap(), EngineFlags::STD)
     }
 
     fn typed(im: &str, keys: &str) -> String {

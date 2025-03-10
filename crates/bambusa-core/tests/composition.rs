@@ -1,18 +1,18 @@
 //! Behavioural corpus: every case the reference engine guarantees, driven
 //! through the public API.
 
-use bambusa_core::{parse_input_method, BambooEngine, EngineFlags, Mode};
+use bambusa_core::{parse_input_method, BambusaEngine, EngineFlags, Mode};
 
 const VIE: Mode = Mode::VIETNAMESE;
 const ENG: Mode = Mode::ENGLISH;
 
-fn std_engine() -> BambooEngine {
+fn std_engine() -> BambusaEngine {
     // Telex 2 with the standard flag set is the reference's default engine.
-    BambooEngine::new(parse_input_method("Telex 2").unwrap(), EngineFlags::STD)
+    BambusaEngine::new(parse_input_method("Telex 2").unwrap(), EngineFlags::STD)
 }
 
-fn engine(im: &str, flags: EngineFlags) -> BambooEngine {
-    BambooEngine::new(parse_input_method(im).unwrap(), flags)
+fn engine(im: &str, flags: EngineFlags) -> BambusaEngine {
+    BambusaEngine::new(parse_input_method(im).unwrap(), flags)
 }
 
 #[test]
