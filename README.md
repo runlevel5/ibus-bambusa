@@ -52,3 +52,7 @@ Requires Rust 1.85.0 (pinned via `rust-toolchain.toml`).
 cargo build
 cargo test
 ```
+
+## License
+
+MIT
