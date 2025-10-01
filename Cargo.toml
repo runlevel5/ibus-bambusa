@@ -2,12 +2,13 @@
 resolver = "2"
 members = [
     "crates/bambusa-core",
+    "crates/ibus-zbus",
 ]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.85"
+edition = "2024"
+rust-version = "1.90"
 license = "MIT"
 authors = ["Trung Lê <8@tle.id.au>"]
 repository = "https://github.com/runlevel5/ibus-bambusa"
@@ -15,3 +16,5 @@ repository = "https://github.com/runlevel5/ibus-bambusa"
 [workspace.dependencies]
 bitflags = "2.9"
 regex = "1.11"
+zvariant = "5.8"
+serde = { version = "1", features = ["derive"] }

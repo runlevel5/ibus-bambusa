@@ -1,0 +1,13 @@
+[package]
+name = "ibus-zbus"
+description = "Engine-side IBus binding for ibus-bambusa (GNOME/Wayland), built on zbus"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+zvariant.workspace = true
+serde.workspace = true
