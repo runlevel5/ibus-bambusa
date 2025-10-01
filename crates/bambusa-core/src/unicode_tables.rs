@@ -80,12 +80,11 @@ pub(crate) fn find_mark_from_char(chr: char) -> Option<Mark> {
 }
 
 pub(crate) fn add_mark_to_toneless_char(chr: char, mark: u8) -> char {
-    if let Some(s) = mark_family_str(chr) {
-        if let Some(m) = s.chars().nth(mark as usize) {
-            if m != '_' {
-                return m;
-            }
-        }
+    if let Some(s) = mark_family_str(chr)
+        && let Some(m) = s.chars().nth(mark as usize)
+        && m != '_'
+    {
+        return m;
     }
     chr
 }

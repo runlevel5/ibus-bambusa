@@ -144,17 +144,23 @@ mod tests {
     fn mark_line_maps_vowel_across_tones() {
         // Telex "a": A_Â -> 'a' adds hat, including a toggle-off rule.
         let rules = parse_rules('a', "A_Â");
-        assert!(rules
-            .iter()
-            .all(|r| r.effect_type == EffectType::MarkTransformation));
+        assert!(
+            rules
+                .iter()
+                .all(|r| r.effect_type == EffectType::MarkTransformation)
+        );
         // a -> â among the generated mappings.
-        assert!(rules
-            .iter()
-            .any(|r| r.effect_on == 'a' && r.result == 'â' && r.mark() == Mark::Hat));
+        assert!(
+            rules
+                .iter()
+                .any(|r| r.effect_on == 'a' && r.result == 'â' && r.mark() == Mark::Hat)
+        );
         // toggle: â -> a with no mark.
-        assert!(rules
-            .iter()
-            .any(|r| r.effect_on == 'â' && r.result == 'a' && r.effect == 0));
+        assert!(
+            rules
+                .iter()
+                .any(|r| r.effect_on == 'â' && r.result == 'a' && r.effect == 0)
+        );
     }
 
     #[test]
@@ -173,12 +179,16 @@ mod tests {
     fn trailing_append_clause_is_captured() {
         // Telex W "w": UOA_ƯƠĂ__Ư -> mark rules plus an appending 'ư'.
         let rules = parse_rules('w', "UOA_ƯƠĂ__Ư");
-        assert!(rules
-            .iter()
-            .any(|r| r.effect_type == EffectType::Appending && r.result == 'ư'));
-        assert!(rules
-            .iter()
-            .any(|r| r.effect_on == 'u' && r.result == 'ư' && r.mark() == Mark::Horn));
+        assert!(
+            rules
+                .iter()
+                .any(|r| r.effect_type == EffectType::Appending && r.result == 'ư')
+        );
+        assert!(
+            rules
+                .iter()
+                .any(|r| r.effect_on == 'u' && r.result == 'ư' && r.mark() == Mark::Horn)
+        );
     }
 
     #[test]

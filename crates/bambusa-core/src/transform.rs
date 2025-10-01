@@ -426,11 +426,10 @@ fn tone_target_for(comp: &[Transformation], rule: &Rule, flags: EngineFlags) -> 
             return find_tone_target(comp, flags.contains(EngineFlags::STD_TONE_STYLE));
         }
         None
-    } else if let Some(la) = find_last_appending_trans(comp) {
-        if by_id(comp, la).is_some_and(|t| is_vowel(t.rule.effect_on)) {
-            return Some(la);
-        }
-        None
+    } else if let Some(la) = find_last_appending_trans(comp)
+        && by_id(comp, la).is_some_and(|t| is_vowel(t.rule.effect_on))
+    {
+        Some(la)
     } else {
         None
     }
@@ -508,24 +507,23 @@ pub(crate) fn generate_transformations(
     let mut out = Vec::new();
 
     // Double-typing an effect key undoes it (raw): w + w -> w.
-    if let Some(last) = comp.last() {
-        if last.rule.effect_type == EffectType::Appending
-            && last.rule.key == lower_key
-            && last.rule.key != last.rule.result
-        {
-            out.push(Transformation {
-                id: ids.next_id(),
-                target: Some(last.id),
-                rule: Rule {
-                    effect_type: EffectType::MarkTransformation,
-                    effect: Mark::Raw as u8,
-                    key: '\0',
-                    ..Default::default()
-                },
-                is_upper_case: false,
-            });
-            return out;
-        }
+    if let Some(last) = comp.last()
+        && last.rule.effect_type == EffectType::Appending
+        && last.rule.key == lower_key
+        && last.rule.key != last.rule.result
+    {
+        out.push(Transformation {
+            id: ids.next_id(),
+            target: Some(last.id),
+            rule: Rule {
+                effect_type: EffectType::MarkTransformation,
+                effect: Mark::Raw as u8,
+                key: '\0',
+                ..Default::default()
+            },
+            is_upper_case: false,
+        });
+        return out;
     }
 
     let (target, applicable_rule) = find_target(comp, rules, flags);
@@ -579,17 +577,17 @@ pub(crate) fn generate_transformations(
             let mut probe = comp.to_vec();
             probe.push(trans.clone());
             let (t, applicable_rule) = find_target(&probe, rules, flags);
-            if let Some(t_id) = t {
-                if t_id != vowels[0].id {
-                    out.push(trans);
-                    out.push(Transformation {
-                        id: ids.next_id(),
-                        rule: applicable_rule,
-                        target: Some(t_id),
-                        is_upper_case,
-                    });
-                    return out;
-                }
+            if let Some(t_id) = t
+                && t_id != vowels[0].id
+            {
+                out.push(trans);
+                out.push(Transformation {
+                    id: ids.next_id(),
+                    rule: applicable_rule,
+                    target: Some(t_id),
+                    is_upper_case,
+                });
+                return out;
             }
         }
     }

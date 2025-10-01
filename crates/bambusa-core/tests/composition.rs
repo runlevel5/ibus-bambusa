@@ -1,7 +1,7 @@
 //! Behavioural corpus: every case the reference engine guarantees, driven
 //! through the public API.
 
-use bambusa_core::{parse_input_method, BambusaEngine, EngineFlags, Mode};
+use bambusa_core::{BambusaEngine, EngineFlags, Mode, parse_input_method};
 
 const VIE: Mode = Mode::VIETNAMESE;
 const ENG: Mode = Mode::ENGLISH;

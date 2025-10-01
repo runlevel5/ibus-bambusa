@@ -5,11 +5,11 @@ use crate::input_method::InputMethod;
 use crate::mode::{EngineFlags, Mode};
 use crate::rules::Rule;
 use crate::transform::{
-    break_composition, by_id, extract_last_syllable, extract_last_word,
-    extract_last_word_with_punctuation_marks, find_last_appending_trans, find_target_by_rules,
-    generate_fallback_transformations, generate_transformations, is_valid as composition_is_valid,
-    matches_uoh_tail, new_appending_trans, refresh_last_tone_target, IdGen, Retarget,
-    Transformation,
+    IdGen, Retarget, Transformation, break_composition, by_id, extract_last_syllable,
+    extract_last_word, extract_last_word_with_punctuation_marks, find_last_appending_trans,
+    find_target_by_rules, generate_fallback_transformations, generate_transformations,
+    is_valid as composition_is_valid, matches_uoh_tail, new_appending_trans,
+    refresh_last_tone_target,
 };
 use crate::unicode_tables::{can_process_key, to_lower};
 
