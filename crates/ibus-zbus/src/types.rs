@@ -10,13 +10,25 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use zvariant::{OwnedValue, Type};
+use zvariant::{OwnedValue, Type, Value};
+
+use crate::consts::{ATTR_TYPE_UNDERLINE, ATTR_UNDERLINE_SINGLE, ORIENTATION_SYSTEM};
 
 /// `a{sv}` — the attachments map every IBus object carries.
 type Attachments = HashMap<String, OwnedValue>;
 
+/// Wrap an IBus object as the variant (`v`) IBus expects on the wire.
+fn variant<T: Into<Value<'static>>>(value: T) -> OwnedValue {
+    let value: Value<'static> = value.into();
+    OwnedValue::try_from(value).expect("IBus object converts to an owned variant")
+}
+
+fn empty_attachments() -> Attachments {
+    HashMap::new()
+}
+
 /// `IBusAttribute` — a styling run over preedit text. Signature `(sa{sv}uuuu)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusAttribute {
     pub name: String,
     pub attachments: Attachments,
@@ -27,7 +39,7 @@ pub struct IBusAttribute {
 }
 
 /// `IBusAttrList` — a list of attributes. Signature `(sa{sv}av)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusAttrList {
     pub name: String,
     pub attachments: Attachments,
@@ -35,7 +47,7 @@ pub struct IBusAttrList {
 }
 
 /// `IBusText` — displayable text plus its attributes. Signature `(sa{sv}sv)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusText {
     pub name: String,
     pub attachments: Attachments,
@@ -44,7 +56,7 @@ pub struct IBusText {
 }
 
 /// `IBusProperty` — a property-panel entry. Signature `(sa{sv}suvsvbbuvv)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusProperty {
     pub name: String,
     pub attachments: Attachments,
@@ -61,7 +73,7 @@ pub struct IBusProperty {
 }
 
 /// `IBusPropList` — a list of properties. Signature `(sa{sv}av)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusPropList {
     pub name: String,
     pub attachments: Attachments,
@@ -69,7 +81,7 @@ pub struct IBusPropList {
 }
 
 /// `IBusLookupTable` — candidate list. Signature `(sa{sv}uubbiavav)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusLookupTable {
     pub name: String,
     pub attachments: Attachments,
@@ -83,7 +95,7 @@ pub struct IBusLookupTable {
 }
 
 /// `IBusComponent` — component registration. Signature `(sa{sv}ssssssssavav)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusComponent {
     pub name: String,
     pub attachments: Attachments,
@@ -100,7 +112,7 @@ pub struct IBusComponent {
 }
 
 /// `IBusEngineDesc` — engine descriptor. Signature `(sa{sv}ssssssssusssssss)`.
-#[derive(Debug, Clone, Type, Serialize, Deserialize)]
+#[derive(Debug, Clone, Type, Serialize, Deserialize, Value, OwnedValue)]
 pub struct IBusEngineDesc {
     pub name: String,
     pub attachments: Attachments,
@@ -122,6 +134,132 @@ pub struct IBusEngineDesc {
     pub textdomain: String,
 }
 
+impl IBusAttribute {
+    pub fn new(kind: u32, value: u32, start_index: u32, end_index: u32) -> Self {
+        Self {
+            name: "IBusAttribute".into(),
+            attachments: empty_attachments(),
+            kind,
+            value,
+            start_index,
+            end_index,
+        }
+    }
+}
+
+impl IBusAttrList {
+    pub fn new() -> Self {
+        Self::with(Vec::new())
+    }
+
+    pub fn with(attributes: Vec<IBusAttribute>) -> Self {
+        Self {
+            name: "IBusAttrList".into(),
+            attachments: empty_attachments(),
+            attributes: attributes.into_iter().map(variant).collect(),
+        }
+    }
+}
+
+impl Default for IBusAttrList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl IBusText {
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            name: "IBusText".into(),
+            attachments: empty_attachments(),
+            text: text.into(),
+            attr_list: variant(IBusAttrList::new()),
+        }
+    }
+
+    /// Text with a single-underline attribute spanning the whole string.
+    pub fn with_underline(text: impl Into<String>) -> Self {
+        let text = text.into();
+        let end = text.chars().count() as u32;
+        let attr = IBusAttribute::new(ATTR_TYPE_UNDERLINE, ATTR_UNDERLINE_SINGLE, 0, end);
+        Self {
+            name: "IBusText".into(),
+            attachments: empty_attachments(),
+            text,
+            attr_list: variant(IBusAttrList::with(vec![attr])),
+        }
+    }
+}
+
+impl IBusProperty {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        key: impl Into<String>,
+        kind: u32,
+        label: &str,
+        icon: impl Into<String>,
+        tooltip: &str,
+        sensitive: bool,
+        visible: bool,
+        state: u32,
+    ) -> Self {
+        Self {
+            name: "IBusProperty".into(),
+            attachments: empty_attachments(),
+            key: key.into(),
+            kind,
+            label: variant(IBusText::new(label)),
+            icon: icon.into(),
+            tooltip: variant(IBusText::new(tooltip)),
+            sensitive,
+            visible,
+            state,
+            sub_props: variant(IBusPropList::new(Vec::new())),
+            symbol: variant(IBusText::new("")),
+        }
+    }
+}
+
+impl IBusPropList {
+    pub fn new(properties: Vec<IBusProperty>) -> Self {
+        Self {
+            name: "IBusPropList".into(),
+            attachments: empty_attachments(),
+            property_list: properties.into_iter().map(variant).collect(),
+        }
+    }
+}
+
+impl IBusLookupTable {
+    pub fn new() -> Self {
+        Self {
+            name: "IBusLookupTable".into(),
+            attachments: empty_attachments(),
+            page_size: 5,
+            cursor_pos: 0,
+            cursor_visible: true,
+            round: false,
+            orientation: ORIENTATION_SYSTEM,
+            candidates: Vec::new(),
+            labels: Vec::new(),
+        }
+    }
+
+    pub fn append_candidate(&mut self, text: &str) {
+        self.candidates.push(variant(IBusText::new(text)));
+    }
+
+    pub fn append_label(&mut self, label: &str) {
+        self.labels.push(variant(IBusText::new(label)));
+    }
+}
+
+impl Default for IBusLookupTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,5 +277,32 @@ mod tests {
             IBusEngineDesc::SIGNATURE.to_string(),
             "(sa{sv}ssssssssusssssss)"
         );
+    }
+
+    #[test]
+    fn text_constructors() {
+        let t = IBusText::new("việt");
+        assert_eq!(t.name, "IBusText");
+        assert_eq!(t.text, "việt");
+
+        let u = IBusText::with_underline("việt");
+        // Round-trip the nested attr list back out of its variant.
+        let list = IBusAttrList::try_from(u.attr_list).unwrap();
+        assert_eq!(list.attributes.len(), 1);
+        let attr = IBusAttribute::try_from(list.attributes[0].clone()).unwrap();
+        assert_eq!(attr.kind, ATTR_TYPE_UNDERLINE);
+        assert_eq!(attr.end_index, 4); // four chars in "việt"
+    }
+
+    #[test]
+    fn lookup_table_defaults_and_append() {
+        let mut lt = IBusLookupTable::new();
+        assert_eq!(lt.page_size, 5);
+        assert!(lt.cursor_visible);
+        assert_eq!(lt.orientation, ORIENTATION_SYSTEM);
+        lt.append_candidate("a");
+        lt.append_label("1");
+        assert_eq!(lt.candidates.len(), 1);
+        assert_eq!(lt.labels.len(), 1);
     }
 }
