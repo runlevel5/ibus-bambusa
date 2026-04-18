@@ -8,13 +8,13 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.90"
+rust-version = "1.95"
 license = "MIT"
 authors = ["Trung Lê <8@tle.id.au>"]
 repository = "https://github.com/runlevel5/ibus-bambusa"
 
 [workspace.dependencies]
-bitflags = "2.9"
-regex = "1.11"
-zvariant = "5.8"
+bitflags = "2"
+regex = "1"
+zvariant = "5"
 serde = { version = "1", features = ["derive"] }
