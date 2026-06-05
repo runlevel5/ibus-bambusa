@@ -6,10 +6,12 @@
 pub mod address;
 pub mod consts;
 mod engine;
+mod factory;
 mod handler;
 mod types;
 
 pub use engine::EngineInterface;
+pub use factory::Factory;
 pub use handler::{Action, EchoHandler, EngineHandler};
 pub use types::{
     IBusAttrList, IBusAttribute, IBusComponent, IBusEngineDesc, IBusLookupTable, IBusPropList,

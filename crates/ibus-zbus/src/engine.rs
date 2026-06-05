@@ -107,14 +107,14 @@ impl Actor {
         self.emit_all(actions).await;
     }
 
-    async fn emit_all(&self, actions: Vec<Action>) {
+    async fn emit_all(&mut self, actions: Vec<Action>) {
         for action in actions {
             // A failed emission (e.g. client gone) shouldn't kill the engine.
             let _ = self.emit(action).await;
         }
     }
 
-    async fn emit(&self, action: Action) -> zbus::Result<()> {
+    async fn emit(&mut self, action: Action) -> zbus::Result<()> {
         let e = &self.emitter;
         match action {
             Action::CommitText(text) => {
