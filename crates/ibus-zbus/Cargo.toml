@@ -11,3 +11,5 @@ repository.workspace = true
 [dependencies]
 zvariant.workspace = true
 serde.workspace = true
+zbus.workspace = true
+tokio.workspace = true

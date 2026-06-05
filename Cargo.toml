@@ -18,3 +18,5 @@ bitflags = "2"
 regex = "1"
 zvariant = "5"
 serde = { version = "1", features = ["derive"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }

@@ -3,6 +3,7 @@
 //! Currently provides the IBus wire types and constants; the bus connection
 //! and the `Factory`/`Engine` interfaces are added on top of these.
 
+pub mod address;
 pub mod consts;
 mod types;
 
