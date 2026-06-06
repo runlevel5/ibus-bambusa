@@ -46,11 +46,25 @@ This is a Cargo workspace:
 
 ## Building
 
-Requires Rust 1.95.0 (pinned via `rust-toolchain.toml`).
+Requires Rust 1.95.0 (pinned via `rust-toolchain.toml`) and IBus. Installing
+additionally needs Meson and Ninja.
+
+### Develop
 
 ```sh
 cargo build
 cargo test
+```
+
+### Install
+
+The engine is built and installed with Meson, which wraps Cargo:
+
+```sh
+meson setup builddir --buildtype=release --prefix=/usr
+meson compile -C builddir
+sudo meson install -C builddir
+ibus restart
 ```
 
 ## License
