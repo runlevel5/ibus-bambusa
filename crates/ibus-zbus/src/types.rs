@@ -14,7 +14,7 @@ use zvariant::{OwnedValue, Type, Value};
 
 use crate::consts::{
     ATTR_TYPE_UNDERLINE, ATTR_UNDERLINE_SINGLE, ORIENTATION_SYSTEM, PROP_STATE_CHECKED,
-    PROP_STATE_UNCHECKED, PROP_TYPE_MENU, PROP_TYPE_RADIO,
+    PROP_STATE_UNCHECKED, PROP_TYPE_MENU, PROP_TYPE_NORMAL, PROP_TYPE_RADIO,
 };
 
 /// `a{sv}` — the attachments map every IBus object carries.
@@ -264,6 +264,20 @@ impl Default for IBusLookupTable {
 }
 
 impl IBusProperty {
+    /// A plain clickable (button) property.
+    pub fn normal(key: impl Into<String>, label: &str) -> Self {
+        Self::new(
+            key,
+            PROP_TYPE_NORMAL,
+            label,
+            "",
+            "",
+            true,
+            true,
+            PROP_STATE_UNCHECKED,
+        )
+    }
+
     /// A radio-button property, checked or not.
     pub fn radio(key: impl Into<String>, label: &str, checked: bool) -> Self {
         let state = if checked {
