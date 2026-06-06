@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component>
+    <name>org.freedesktop.IBus.bambusa</name>
+    <description>Vietnamese input method for GNOME (Wayland)</description>
+    <exec>@libexecdir@/ibus-bambusa/ibus-engine-bambusa --ibus</exec>
+    <version>@version@</version>
+    <author>Trung Lê</author>
+    <license>MIT</license>
+    <homepage>https://github.com/runlevel5/ibus-bambusa</homepage>
+    <textdomain>ibus-bambusa</textdomain>
+    <engines>
+        <engine>
+            <symbol>vi</symbol>
+            <name>Bambusa</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>default</layout>
+            <longname>Vietnamese (Telex)</longname>
+            <description>Vietnamese input method — Telex</description>
+            <rank>1</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaTelexW</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>default</layout>
+            <longname>Vietnamese (Telex W)</longname>
+            <description>Vietnamese input method — Telex W</description>
+            <rank>0</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaTelex2</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>default</layout>
+            <longname>Vietnamese (Telex 2)</longname>
+            <description>Vietnamese input method — Telex 2</description>
+            <rank>0</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaVNI</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>us</layout>
+            <longname>Vietnamese (VNI)</longname>
+            <description>Vietnamese input method — VNI</description>
+            <rank>1</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaVIQR</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>us</layout>
+            <longname>Vietnamese (VIQR)</longname>
+            <description>Vietnamese input method — VIQR</description>
+            <rank>0</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaMicrosoft</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>us</layout>
+            <longname>Vietnamese (Microsoft layout)</longname>
+            <description>Vietnamese input method — Microsoft layout</description>
+            <rank>0</rank>
+        </engine>
+        <engine>
+            <symbol>vi</symbol>
+            <name>BambusaVNIFrench</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>fr</layout>
+            <longname>Vietnamese (VNI — French keyboard)</longname>
+            <description>Vietnamese input method — VNI for French keyboards</description>
+            <rank>0</rank>
+        </engine>
+    </engines>
+</component>
