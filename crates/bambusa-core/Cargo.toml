@@ -1,6 +1,6 @@
 [package]
 name = "bambusa-core"
-description = "Core engine for ibus-bambusa, a Vietnamese IBus input method for GNOME (Wayland)"
+description = "Core engine for ibus-bambusa, a Vietnamese IBus input method"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
