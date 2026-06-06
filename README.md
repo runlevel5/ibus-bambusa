@@ -41,12 +41,12 @@ This is a Cargo workspace:
 | Crate | What it is |
 |-------|------------|
 | `bambusa-core` | The composition engine: keystrokes → Vietnamese text. Pure, no I/O. |
-| `ibus-zbus` *(planned)* | Engine-side IBus binding on zbus. |
-| `ibus-bambusa` *(planned)* | The IBus engine binary. |
+| `ibus-zbus` | Engine-side IBus binding on zbus. |
+| `ibus-bambusa` | The IBus engine binary. |
 
 ## Building
 
-Requires Rust 1.85.0 (pinned via `rust-toolchain.toml`).
+Requires Rust 1.95.0 (pinned via `rust-toolchain.toml`).
 
 ```sh
 cargo build
