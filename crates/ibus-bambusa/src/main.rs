@@ -8,6 +8,7 @@ mod keysyms;
 mod preedit;
 
 use config::Config;
+use flags::Keyboard;
 use ibus_zbus::{EngineHandler, Factory, address, consts};
 use preedit::PreeditHandler;
 
@@ -27,7 +28,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let factory = Factory::new(move |engine_name| {
         let mut cfg = config.clone();
-        cfg.input_method = engines::method_for_engine(engine_name).to_string();
+        let mut method = engines::method_for_engine(engine_name).to_string();
+        // The VNI engine uses the AZERTY rule set when so configured.
+        if method == engines::VNI && cfg.vni_keyboard == Keyboard::Azerty {
+            method = engines::VNI_AZERTY.to_string();
+        }
+        cfg.input_method = method;
         Box::new(PreeditHandler::new(cfg)) as Box<dyn EngineHandler>
     });
     connection

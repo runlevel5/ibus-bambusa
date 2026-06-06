@@ -5,10 +5,11 @@ use bambusa_core::{
     BambusaEngine, Mode, encode, has_any_vietnamese_rune, has_any_vietnamese_vowel,
     is_word_break_symbol, parse_input_method,
 };
-use ibus_zbus::{Action, EngineHandler};
+use ibus_zbus::{Action, EngineHandler, IBusPropList, IBusProperty};
 
 use crate::config::Config;
-use crate::flags::IBFlags;
+use crate::engines::{VNI, VNI_AZERTY};
+use crate::flags::{IBFlags, Keyboard};
 use crate::keysyms;
 
 /// Composes Vietnamese text and renders it through IBus preedit.
@@ -271,6 +272,32 @@ impl PreeditHandler {
         self.engine.reset();
         actions
     }
+
+    /// Whether the active method is the VNI pair (which offers QWERTY/AZERTY).
+    fn is_vni_family(&self) -> bool {
+        self.config.input_method == VNI || self.config.input_method == VNI_AZERTY
+    }
+
+    fn rebuild_engine(&mut self) {
+        let im = parse_input_method(&self.config.input_method)
+            .or_else(|| parse_input_method("Telex"))
+            .expect("Telex is a built-in input method");
+        self.engine = BambusaEngine::new(im, self.config.engine_flags);
+    }
+
+    /// The property-panel tree: a `Keyboard` menu with QWERTY/AZERTY radios.
+    fn keyboard_properties(&self) -> Action {
+        let azerty = self.config.input_method == VNI_AZERTY;
+        let menu = IBusProperty::menu(
+            "Keyboard",
+            "Keyboard layout",
+            vec![
+                IBusProperty::radio("Keyboard.QWERTY", "QWERTY", !azerty),
+                IBusProperty::radio("Keyboard.AZERTY", "AZERTY", azerty),
+            ],
+        );
+        Action::RegisterProperties(Box::new(IBusPropList::new(vec![menu])))
+    }
 }
 
 impl EngineHandler for PreeditHandler {
@@ -321,7 +348,14 @@ impl EngineHandler for PreeditHandler {
     }
 
     fn focus_in(&mut self) -> Vec<Action> {
-        self.reset()
+        self.engine.reset();
+        let mut actions = Vec::new();
+        if self.is_vni_family() {
+            actions.push(self.keyboard_properties());
+        }
+        actions.push(Action::HidePreedit);
+        actions.push(Action::HideAuxiliaryText);
+        actions
     }
 
     fn focus_out(&mut self) -> Vec<Action> {
@@ -331,6 +365,25 @@ impl EngineHandler for PreeditHandler {
     fn reset(&mut self) -> Vec<Action> {
         self.engine.reset();
         vec![Action::HidePreedit, Action::HideAuxiliaryText]
+    }
+
+    fn property_activate(&mut self, name: String, _state: u32) -> Vec<Action> {
+        let method = match name.as_str() {
+            "Keyboard.QWERTY" => VNI,
+            "Keyboard.AZERTY" => VNI_AZERTY,
+            _ => return Vec::new(),
+        };
+        if self.config.input_method != method {
+            self.config.input_method = method.to_string();
+            self.config.vni_keyboard = if method == VNI_AZERTY {
+                Keyboard::Azerty
+            } else {
+                Keyboard::Qwerty
+            };
+            let _ = self.config.save();
+            self.rebuild_engine();
+        }
+        vec![self.keyboard_properties(), Action::HidePreedit]
     }
 }
 
@@ -393,5 +446,28 @@ mod tests {
         let mut h = handler();
         let actions = type_keys(&mut h, "catr");
         assert_eq!(preedit_of(&actions), Some("catr"));
+    }
+
+    #[test]
+    fn vni_focus_registers_keyboard_menu() {
+        let cfg = Config {
+            input_method: "VNI".to_string(),
+            ..Config::default()
+        };
+        let mut vni = PreeditHandler::new(cfg);
+        assert!(
+            vni.focus_in()
+                .iter()
+                .any(|a| matches!(a, Action::RegisterProperties(_)))
+        );
+
+        // A letter-based method (Telex) registers no keyboard menu.
+        let mut telex = handler();
+        assert!(
+            !telex
+                .focus_in()
+                .iter()
+                .any(|a| matches!(a, Action::RegisterProperties(_)))
+        );
     }
 }
