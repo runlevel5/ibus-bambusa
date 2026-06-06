@@ -48,7 +48,7 @@ pub(crate) fn is_punctuation_mark(key: char) -> bool {
     PUNCTUATION_MARKS.contains(&key)
 }
 
-pub(crate) fn is_word_break_symbol(key: char) -> bool {
+pub fn is_word_break_symbol(key: char) -> bool {
     is_punctuation_mark(key) || key.is_ascii_digit()
 }
 

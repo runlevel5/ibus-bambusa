@@ -1,0 +1,22 @@
+[package]
+name = "ibus-bambusa"
+description = "Vietnamese IBus input method engine for GNOME (Wayland)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "ibus-engine-bambusa"
+path = "src/main.rs"
+
+[dependencies]
+bambusa-core = { path = "../bambusa-core" }
+ibus-zbus = { path = "../ibus-zbus" }
+bitflags.workspace = true
+zbus.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true

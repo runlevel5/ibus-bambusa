@@ -264,6 +264,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "ibus-bambusa"
+version = "0.1.0"
+dependencies = [
+ "bambusa-core",
+ "bitflags",
+ "ibus-zbus",
+ "serde",
+ "serde_json",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "ibus-zbus"
 version = "0.1.0"
 dependencies = [

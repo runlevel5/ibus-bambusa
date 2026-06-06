@@ -18,4 +18,4 @@ pub use engine::BambusaEngine;
 pub use input_method::{InputMethod, build_input_method, input_method_names, parse_input_method};
 pub use mode::{EngineFlags, Mode};
 pub use rules::{EffectType, Mark, Rule, Tone};
-pub use unicode_tables::{has_any_vietnamese_rune, has_any_vietnamese_vowel};
+pub use unicode_tables::{has_any_vietnamese_rune, has_any_vietnamese_vowel, is_word_break_symbol};
