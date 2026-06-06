@@ -14,6 +14,7 @@ pub const ENGINES: &[(&str, &str)] = &[
     ("BambusaVIQR", "VIQR"),
     ("BambusaMicrosoft", "Microsoft layout"),
     ("BambusaVNIAzerty", "VNI (AZERTY)"),
+    ("BambusaVNIAfnor", "VNI (AZERTY, AFNOR)"),
 ];
 
 /// The input method for an IBus engine name, defaulting to Telex.

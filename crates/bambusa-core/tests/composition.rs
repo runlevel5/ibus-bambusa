@@ -429,3 +429,34 @@ fn double_typing_corpus() {
     e.process_string("tôi）t", ENG);
     assert_eq!(e.processed_string(VIE), "t");
 }
+
+#[test]
+fn vni_afnor_triggers() {
+    let mut e = engine("VNI (AZERTY, AFNOR)", EngineFlags::STD);
+
+    // Accented-letter triggers map to their own diacritic.
+    for (keys, want) in [("aé", "á"), ("aè", "à"), ("aê", "â")] {
+        e.reset();
+        e.process_string(keys, VIE);
+        assert_eq!(e.processed_string(VIE), want, "{keys}");
+    }
+
+    // Punctuation triggers relocated for AFNOR's unshifted layer.
+    for (keys, want) in [
+        ("a)", "ả"), // hook
+        ("a(", "ã"), // tilde
+        ("a-", "ạ"), // dot
+        ("u«", "ư"), // horn
+        ("a»", "ă"), // breve
+        ("dà", "đ"), // đ
+    ] {
+        e.reset();
+        e.process_string(keys, VIE);
+        assert_eq!(e.processed_string(VIE), want, "{keys}");
+    }
+
+    // A full syllable: viet + ê (circumflex) + é (acute) -> viết.
+    e.reset();
+    e.process_string("vietêé", VIE);
+    assert_eq!(e.processed_string(VIE), "viết");
+}

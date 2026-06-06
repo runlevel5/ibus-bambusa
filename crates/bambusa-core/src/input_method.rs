@@ -193,6 +193,25 @@ const DEFINITIONS: &[Definition] = &[
             ("à", "D_Đ"),
         ],
     ),
+    // AFNOR (NF Z71-300) AZERTY relocates the symbols traditional AZERTY uses,
+    // so triggers come from AFNOR's unshifted layer: the accented letters map to
+    // their own diacritics (é→sắc, è→huyền, ê→ô-mũ), and the rest use the
+    // guillemets and brackets that sit unshifted on that layout.
+    (
+        "VNI (AZERTY, AFNOR)",
+        &[
+            ("+", "XoáDấuThanh"),
+            ("é", "DấuSắc"),
+            ("è", "DấuHuyền"),
+            (")", "DấuHỏi"),
+            ("(", "DấuNgã"),
+            ("-", "DấuNặng"),
+            ("ê", "AEO_ÂÊÔ"),
+            ("«", "UO_ƯƠ"),
+            ("»", "A_Ă"),
+            ("à", "D_Đ"),
+        ],
+    ),
     (
         "Telex W",
         &[

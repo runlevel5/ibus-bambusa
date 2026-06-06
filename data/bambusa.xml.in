@@ -93,5 +93,18 @@
             <description>Vietnamese input method — VNI for AZERTY keyboards</description>
             <rank>0</rank>
         </engine>
+        <engine>
+            <symbol>ặ</symbol>
+            <name>BambusaVNIAfnor</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>fr</layout>
+            <layout_variant>afnor</layout_variant>
+            <longname>VNI (AZERTY, AFNOR)</longname>
+            <description>Vietnamese input method — VNI for AFNOR AZERTY keyboards</description>
+            <rank>0</rank>
+        </engine>
     </engines>
 </component>
