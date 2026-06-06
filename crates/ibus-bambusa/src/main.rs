@@ -1,13 +1,11 @@
 //! The ibus-bambusa engine binary: connects to IBus and serves a factory whose
 //! engines compose Vietnamese in preedit mode.
 
-mod config;
 mod engines;
-mod flags;
 mod keysyms;
 mod preedit;
 
-use config::Config;
+use bambusa_config::Config;
 use ibus_zbus::{EngineHandler, Factory, address, consts};
 use preedit::PreeditHandler;
 

@@ -2,8 +2,10 @@
 resolver = "2"
 members = [
     "crates/bambusa-core",
+    "crates/bambusa-config",
     "crates/ibus-zbus",
     "crates/ibus-bambusa",
+    "crates/ibus-bambusa-setup",
 ]
 
 [workspace.package]

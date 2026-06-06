@@ -33,4 +33,23 @@ custom_target(
     ],
 )
 
+# Build the preferences GUI binary (launched via the engine's <setup>).
+custom_target(
+    'ibus-setup-bambusa',
+    output: 'ibus-setup-bambusa',
+    build_by_default: true,
+    build_always_stale: true,
+    console: true,
+    install: true,
+    install_dir: libexecdir / 'ibus-bambusa',
+    command: [
+        cargo_build,
+        meson.project_source_root(),
+        meson.project_build_root() / 'cargo-target',
+        '@OUTPUT@',
+        profile,
+        'ibus-setup-bambusa',
+    ],
+)
+
 subdir('data')

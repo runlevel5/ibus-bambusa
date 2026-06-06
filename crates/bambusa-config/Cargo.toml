@@ -1,0 +1,15 @@
+[package]
+name = "bambusa-config"
+description = "Shared configuration for the ibus-bambusa engine and its preferences GUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+bambusa-core = { path = "../bambusa-core" }
+bitflags.workspace = true
+serde.workspace = true
+serde_json.workspace = true

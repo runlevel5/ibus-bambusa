@@ -5,10 +5,10 @@ use bambusa_core::{
     BambusaEngine, Mode, encode, has_any_vietnamese_rune, has_any_vietnamese_vowel,
     is_word_break_symbol, parse_input_method,
 };
-use ibus_zbus::{Action, EngineHandler};
+use ibus_zbus::{Action, EngineHandler, IBusPropList, IBusProperty};
 
-use crate::config::Config;
-use crate::flags::IBFlags;
+use bambusa_config::{Config, IBFlags};
+
 use crate::keysyms;
 
 /// Composes Vietnamese text and renders it through IBus preedit.
@@ -271,6 +271,37 @@ impl PreeditHandler {
         self.engine.reset();
         actions
     }
+
+    /// Re-read settings from disk so changes made in the preferences GUI take
+    /// effect on the next focus, without restarting IBus. The input method is
+    /// fixed by the engine name (not the file), so it is preserved; the composer
+    /// is rebuilt only when the engine flags actually changed.
+    fn reload_config(&mut self) {
+        let mut fresh = Config::load();
+        fresh.input_method = self.config.input_method.clone();
+        if fresh.engine_flags != self.config.engine_flags
+            && let Some(im) = parse_input_method(&fresh.input_method)
+        {
+            self.engine = BambusaEngine::new(im, fresh.engine_flags);
+        }
+        self.config = fresh;
+    }
+
+    /// The property panel: a single "Preferences" button shown in the GNOME
+    /// input menu. Activating it launches the setup GUI.
+    fn setup_property(&self) -> Action {
+        let prefs = IBusProperty::normal("setup", "Preferences");
+        Action::RegisterProperties(Box::new(IBusPropList::new(vec![prefs])))
+    }
+
+    /// Launch the preferences GUI, which lives next to this binary.
+    fn spawn_setup(&self) {
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(dir) = exe.parent()
+        {
+            let _ = std::process::Command::new(dir.join("ibus-setup-bambusa")).spawn();
+        }
+    }
 }
 
 impl EngineHandler for PreeditHandler {
@@ -321,7 +352,10 @@ impl EngineHandler for PreeditHandler {
     }
 
     fn focus_in(&mut self) -> Vec<Action> {
-        self.reset()
+        self.reload_config();
+        let mut actions = vec![self.setup_property()];
+        actions.append(&mut self.reset());
+        actions
     }
 
     fn focus_out(&mut self) -> Vec<Action> {
@@ -331,6 +365,13 @@ impl EngineHandler for PreeditHandler {
     fn reset(&mut self) -> Vec<Action> {
         self.engine.reset();
         vec![Action::HidePreedit, Action::HideAuxiliaryText]
+    }
+
+    fn property_activate(&mut self, name: String, _state: u32) -> Vec<Action> {
+        if name == "setup" {
+            self.spawn_setup();
+        }
+        Vec::new()
     }
 }
 

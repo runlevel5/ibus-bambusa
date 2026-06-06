@@ -20,6 +20,7 @@
             <longname>Telex</longname>
             <description>Vietnamese input method — Telex</description>
             <rank>1</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ữ</symbol>
@@ -32,6 +33,7 @@
             <longname>Telex W</longname>
             <description>Vietnamese input method — Telex W</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ỡ</symbol>
@@ -44,6 +46,7 @@
             <longname>Telex 2</longname>
             <description>Vietnamese input method — Telex 2</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ể</symbol>
@@ -56,6 +59,7 @@
             <longname>VNI</longname>
             <description>Vietnamese input method — VNI</description>
             <rank>1</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ẫ</symbol>
@@ -68,6 +72,7 @@
             <longname>VIQR</longname>
             <description>Vietnamese input method — VIQR</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ì</symbol>
@@ -80,6 +85,7 @@
             <longname>Microsoft layout</longname>
             <description>Vietnamese input method — Microsoft layout</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ệ</symbol>
@@ -92,6 +98,7 @@
             <longname>VNI (AZERTY)</longname>
             <description>Vietnamese input method — VNI for AZERTY keyboards</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
         <engine>
             <symbol>ặ</symbol>
@@ -105,6 +112,7 @@
             <longname>VNI (AZERTY, AFNOR)</longname>
             <description>Vietnamese input method — VNI for AFNOR AZERTY keyboards</description>
             <rank>0</rank>
+            <setup>@libexecdir@/ibus-bambusa/ibus-setup-bambusa</setup>
         </engine>
     </engines>
 </component>

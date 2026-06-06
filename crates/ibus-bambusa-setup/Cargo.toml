@@ -1,6 +1,6 @@
 [package]
-name = "ibus-bambusa"
-description = "Vietnamese IBus input method engine for GNOME (Wayland)"
+name = "ibus-bambusa-setup"
+description = "Preferences GUI for the ibus-bambusa engine (GNOME / libadwaita)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,12 +9,11 @@ authors.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "ibus-engine-bambusa"
+name = "ibus-setup-bambusa"
 path = "src/main.rs"
 
 [dependencies]
 bambusa-core = { path = "../bambusa-core" }
 bambusa-config = { path = "../bambusa-config" }
-ibus-zbus = { path = "../ibus-zbus" }
-zbus.workspace = true
-tokio.workspace = true
+gtk = { package = "gtk4", version = "0.9" }
+libadwaita = { version = "0.7", features = ["v1_4"] }
