@@ -31,15 +31,6 @@ impl InputMode {
     }
 }
 
-/// Physical keyboard layout assumed by digit-based methods (VNI).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Keyboard {
-    /// US QWERTY: VNI tone/mark triggers are the digits `1`–`9`.
-    Qwerty,
-    /// French AZERTY: triggers are the unshifted symbols `é è ç à " ' ( -`.
-    Azerty,
-}
-
 bitflags! {
     /// Feature flags. Bit positions match the original engine so stored configs
     /// decode unchanged (deprecated bits are left as gaps).

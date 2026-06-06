@@ -9,7 +9,7 @@ use std::{env, fs, io};
 use bambusa_core::EngineFlags;
 use serde::{Deserialize, Serialize};
 
-use crate::flags::{IBFlags, InputMode, Keyboard};
+use crate::flags::{IBFlags, InputMode};
 
 const CONFIG_SUBDIR: &str = "ibus-bambusa";
 const CONFIG_FILE: &str = "ibus-bambusa.config.json";
@@ -29,8 +29,6 @@ pub struct Config {
     pub ib_flags: IBFlags,
     /// The single global input mode.
     pub input_mode: InputMode,
-    /// Physical keyboard assumed by the VNI method.
-    pub vni_keyboard: Keyboard,
     /// Keyboard shortcut slots: five `(state, keyval)` pairs.
     pub shortcuts: [u32; 10],
 }
@@ -43,7 +41,6 @@ impl Default for Config {
             engine_flags: EngineFlags::STD,
             ib_flags: IBFlags::STD,
             input_mode: InputMode::Preedit,
-            vni_keyboard: Keyboard::Qwerty,
             shortcuts: [1, 126, 0, 0, 0, 0, 0, 0, 5, 117],
         }
     }
@@ -74,10 +71,6 @@ impl Config {
             ib_flags: Some(self.ib_flags.bits()),
             shortcuts: Some(self.shortcuts),
             default_input_mode: Some(self.input_mode as i32),
-            vni_keyboard: Some(match self.vni_keyboard {
-                Keyboard::Azerty => "AZERTY".to_string(),
-                Keyboard::Qwerty => "QWERTY".to_string(),
-            }),
         };
         let path = config_path();
         if let Some(dir) = path.parent() {
@@ -104,11 +97,6 @@ impl Config {
                 .default_input_mode
                 .map(InputMode::from_stored)
                 .unwrap_or(d.input_mode),
-            vni_keyboard: match f.vni_keyboard.as_deref() {
-                Some("AZERTY") => Keyboard::Azerty,
-                Some("QWERTY") => Keyboard::Qwerty,
-                _ => d.vni_keyboard,
-            },
             shortcuts: f.shortcuts.unwrap_or(d.shortcuts),
         }
     }
@@ -131,8 +119,6 @@ struct ConfigFile {
     shortcuts: Option<[u32; 10]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     default_input_mode: Option<i32>,
-    #[serde(rename = "VniKeyboard", skip_serializing_if = "Option::is_none")]
-    vni_keyboard: Option<String>,
 }
 
 fn config_home() -> PathBuf {

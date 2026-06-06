@@ -4,20 +4,16 @@
 //! methods (and remembers them per window) with its own Super+Space mechanism —
 //! we just map the engine name IBus hands `CreateEngine` back to a method.
 
-/// VNI rules for a QWERTY keyboard (digit triggers).
-pub const VNI: &str = "VNI";
-/// VNI rules for an AZERTY keyboard (the French-keyboard variant).
-pub const VNI_AZERTY: &str = "VNI Bàn phím tiếng Pháp";
-
 /// `(ibus engine name, bambusa-core input method name)`. The method names must
 /// match the built-in methods exactly.
 pub const ENGINES: &[(&str, &str)] = &[
     ("Bambusa", "Telex"),
     ("BambusaTelexW", "Telex W"),
     ("BambusaTelex2", "Telex 2"),
-    ("BambusaVNI", VNI),
+    ("BambusaVNI", "VNI"),
     ("BambusaVIQR", "VIQR"),
     ("BambusaMicrosoft", "Microsoft layout"),
+    ("BambusaVNIAzerty", "VNI (AZERTY)"),
 ];
 
 /// The input method for an IBus engine name, defaulting to Telex.
@@ -36,7 +32,7 @@ mod tests {
     fn maps_engine_names_to_methods() {
         assert_eq!(method_for_engine("Bambusa"), "Telex");
         assert_eq!(method_for_engine("BambusaVNI"), "VNI");
-        assert_eq!(method_for_engine("BambusaMicrosoft"), "Microsoft layout");
+        assert_eq!(method_for_engine("BambusaVNIAzerty"), "VNI (AZERTY)");
         assert_eq!(method_for_engine("anything-else"), "Telex");
     }
 

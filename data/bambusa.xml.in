@@ -52,7 +52,7 @@
             <license>MIT</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
-            <layout>default</layout>
+            <layout>us</layout>
             <longname>VNI</longname>
             <description>Vietnamese input method — VNI</description>
             <rank>1</rank>
@@ -79,6 +79,18 @@
             <layout>us</layout>
             <longname>Microsoft layout</longname>
             <description>Vietnamese input method — Microsoft layout</description>
+            <rank>0</rank>
+        </engine>
+        <engine>
+            <symbol>ệ</symbol>
+            <name>BambusaVNIAzerty</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê</author>
+            <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
+            <layout>fr</layout>
+            <longname>VNI (AZERTY)</longname>
+            <description>Vietnamese input method — VNI for AZERTY keyboards</description>
             <rank>0</rank>
         </engine>
     </engines>

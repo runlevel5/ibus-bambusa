@@ -179,7 +179,7 @@ const DEFINITIONS: &[Definition] = &[
         ],
     ),
     (
-        "VNI Bàn phím tiếng Pháp",
+        "VNI (AZERTY)",
         &[
             ("&", "XoáDấuThanh"),
             ("é", "DấuSắc"),
