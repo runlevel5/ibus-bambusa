@@ -18,8 +18,6 @@ pub enum InputMode {
 
 impl InputMode {
     /// Map a stored integer to a mode, remapping the no-longer-supported mode 6.
-    // Consumed once config-file loading lands.
-    #[allow(dead_code)]
     pub fn from_stored(value: i32) -> Self {
         match value {
             2 => InputMode::SurroundingText,

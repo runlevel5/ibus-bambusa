@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component>
+    <name>org.freedesktop.IBus.bambusa</name>
+    <description>Vietnamese input method for GNOME (Wayland)</description>
+    <exec>/usr/lib/ibus-bambusa/ibus-engine-bambusa --ibus</exec>
+    <version>0.1.0</version>
+    <author>Trung Lê &lt;8@tle.id.au&gt;</author>
+    <license>MIT</license>
+    <homepage>https://github.com/runlevel5/ibus-bambusa</homepage>
+    <textdomain>ibus-bambusa</textdomain>
+    <engines>
+        <engine>
+            <symbol>vi</symbol>
+            <name>Bambusa</name>
+            <language>vi</language>
+            <license>MIT</license>
+            <author>Trung Lê &lt;8@tle.id.au&gt;</author>
+            <icon>/usr/share/ibus-bambusa/icons/vi.svg</icon>
+            <layout>default</layout>
+            <longname>Bambusa</longname>
+            <description>Vietnamese input method for GNOME (Wayland)</description>
+            <rank>1</rank>
+        </engine>
+    </engines>
+</component>

@@ -82,7 +82,7 @@ impl PreeditHandler {
         // Allow "dd" even outside a Vietnamese word — it's common in abbreviations.
         if self.flags().contains(IBFlags::DD_FREE_STYLE)
             && !has_any_vietnamese_vowel(&vn_seq)
-            && (vn_seq.chars().last() == Some('d') || vn_seq.contains('đ'))
+            && (vn_seq.ends_with('d') || vn_seq.contains('đ'))
         {
             return false;
         }

@@ -19,11 +19,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    let config = Config::load();
+
     let connection = address::connect().await?;
     connection.request_name(BUS_NAME).await?;
 
-    let factory = Factory::new(|_engine_name| {
-        Box::new(PreeditHandler::new(Config::default())) as Box<dyn EngineHandler>
+    let factory = Factory::new(move |_engine_name| {
+        Box::new(PreeditHandler::new(config.clone())) as Box<dyn EngineHandler>
     });
     connection
         .object_server()
