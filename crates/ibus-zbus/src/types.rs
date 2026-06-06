@@ -12,7 +12,10 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use zvariant::{OwnedValue, Type, Value};
 
-use crate::consts::{ATTR_TYPE_UNDERLINE, ATTR_UNDERLINE_SINGLE, ORIENTATION_SYSTEM};
+use crate::consts::{
+    ATTR_TYPE_UNDERLINE, ATTR_UNDERLINE_SINGLE, ORIENTATION_SYSTEM, PROP_STATE_CHECKED,
+    PROP_STATE_UNCHECKED, PROP_TYPE_MENU, PROP_TYPE_RADIO,
+};
 
 /// `a{sv}` — the attachments map every IBus object carries.
 type Attachments = HashMap<String, OwnedValue>;
@@ -260,6 +263,34 @@ impl Default for IBusLookupTable {
     }
 }
 
+impl IBusProperty {
+    /// A radio-button property, checked or not.
+    pub fn radio(key: impl Into<String>, label: &str, checked: bool) -> Self {
+        let state = if checked {
+            PROP_STATE_CHECKED
+        } else {
+            PROP_STATE_UNCHECKED
+        };
+        Self::new(key, PROP_TYPE_RADIO, label, "", "", true, true, state)
+    }
+
+    /// A submenu property whose children are `properties`.
+    pub fn menu(key: impl Into<String>, label: &str, properties: Vec<IBusProperty>) -> Self {
+        let mut prop = Self::new(
+            key,
+            PROP_TYPE_MENU,
+            label,
+            "",
+            "",
+            true,
+            true,
+            PROP_STATE_UNCHECKED,
+        );
+        prop.sub_props = variant(IBusPropList::new(properties));
+        prop
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,6 +323,23 @@ mod tests {
         let attr = IBusAttribute::try_from(list.attributes[0].clone()).unwrap();
         assert_eq!(attr.kind, ATTR_TYPE_UNDERLINE);
         assert_eq!(attr.end_index, 4); // four chars in "việt"
+    }
+
+    #[test]
+    fn property_menu_roundtrips() {
+        let menu = IBusProperty::menu(
+            "Keyboard",
+            "Keyboard",
+            vec![
+                IBusProperty::radio("Keyboard.QWERTY", "QWERTY", true),
+                IBusProperty::radio("Keyboard.AZERTY", "AZERTY", false),
+            ],
+        );
+        let list = IBusPropList::new(vec![menu]);
+        // This is exactly what register_properties sends (wrapped in a variant).
+        let v = variant(list);
+        let back = IBusPropList::try_from(v).unwrap();
+        assert_eq!(back.property_list.len(), 1);
     }
 
     #[test]
