@@ -298,8 +298,15 @@ impl PreeditHandler {
     fn spawn_setup(&self) {
         if let Ok(exe) = std::env::current_exe()
             && let Some(dir) = exe.parent()
+            && let Ok(mut child) =
+                std::process::Command::new(dir.join("ibus-setup-bambusa")).spawn()
         {
-            let _ = std::process::Command::new(dir.join("ibus-setup-bambusa")).spawn();
+            // The GUI is single-instance, so a repeat launch hands off and exits
+            // immediately; reap it in the background so it does not linger as a
+            // zombie (and the long-lived primary is reaped when its window closes).
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
         }
     }
 }

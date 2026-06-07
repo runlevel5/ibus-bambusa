@@ -11,6 +11,7 @@ use adw::prelude::*;
 use bambusa_config::{Config, IBFlags};
 use bambusa_core::{EngineFlags, charset_names};
 use gtk::StringList;
+use gtk::gio::ApplicationFlags;
 use libadwaita as adw;
 
 const APP_ID: &str = "org.freedesktop.IBus.bambusa.setup";
@@ -18,8 +19,27 @@ const APP_ID: &str = "org.freedesktop.IBus.bambusa.setup";
 type Shared = Rc<RefCell<Config>>;
 
 fn main() {
-    let app = adw::Application::builder().application_id(APP_ID).build();
-    app.connect_activate(build_ui);
+    // IBus and GNOME launch the setup with an extra argv[1] (the basename, per
+    // ibus-setup's convention); HANDLES_COMMAND_LINE lets us accept and ignore
+    // any arguments instead of bailing out as the default flags would.
+    let app = adw::Application::builder()
+        .application_id(APP_ID)
+        .flags(ApplicationFlags::HANDLES_COMMAND_LINE)
+        .build();
+    app.connect_command_line(|app, _cmdline| {
+        app.activate();
+        0
+    });
+    app.connect_activate(|app| {
+        // Single-instance: launching again (clicking Preferences repeatedly)
+        // re-activates the running process, so just raise the existing window
+        // instead of opening another.
+        if let Some(window) = app.active_window() {
+            window.present();
+        } else {
+            build_ui(app);
+        }
+    });
     app.run();
 }
 
