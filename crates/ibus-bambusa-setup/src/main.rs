@@ -136,14 +136,14 @@ fn build_ui(app: &adw::Application) {
         &spell,
         &settings,
         "Use spelling rules",
-        "",
+        "Accept syllables that follow Vietnamese spelling rules.",
         keys::SPELL_CHECK_RULES,
     );
     add_switch(
         &spell,
         &settings,
         "Use dictionary",
-        "",
+        "Also accept whole words found in the bundled dictionary.",
         keys::SPELL_CHECK_DICTS,
     );
     page.add(&spell);

@@ -64,7 +64,13 @@ msgstr ""
 msgid "Use spelling rules"
 msgstr ""
 
+msgid "Accept syllables that follow Vietnamese spelling rules."
+msgstr ""
+
 msgid "Use dictionary"
+msgstr ""
+
+msgid "Also accept whole words found in the bundled dictionary."
 msgstr ""
 
 msgid "Behaviour"

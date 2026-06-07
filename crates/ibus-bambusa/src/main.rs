@@ -1,6 +1,7 @@
 //! The ibus-bambusa engine binary: connects to IBus and serves a factory whose
 //! engines compose Vietnamese in preedit mode.
 
+mod dict;
 mod engines;
 mod keysyms;
 mod preedit;

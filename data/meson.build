@@ -17,6 +17,13 @@ install_data(
     install_dir: datadir / 'ibus-bambusa' / 'icons',
 )
 
+# Word dictionary for dictionary-based spell-check (and its upstream license).
+install_data(
+    'vietnamese.cm.dict',
+    'LICENSE.vietnamese.cm.dict',
+    install_dir: datadir / 'ibus-bambusa',
+)
+
 # Desktop entry GNOME Settings launches for the engine "Preferences" button
 # (it looks up ibus-setup-<engine-family>.desktop, i.e. ibus-setup-bambusa).
 configure_file(

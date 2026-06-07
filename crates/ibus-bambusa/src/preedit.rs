@@ -73,7 +73,8 @@ impl PreeditHandler {
     }
 
     fn should_fallback_to_english(&self, check_vn_rune: bool) -> bool {
-        if !self.flags().contains(IBFlags::AUTO_NON_VN_RESTORE) {
+        let f = self.flags();
+        if !f.contains(IBFlags::AUTO_NON_VN_RESTORE) || !f.contains(IBFlags::SPELL_CHECK_ENABLED) {
             return false;
         }
         let vn_seq = self.processed(Mode::VIETNAMESE | Mode::LOWERCASE);
@@ -81,7 +82,7 @@ impl PreeditHandler {
             return false;
         }
         // Allow "dd" even outside a Vietnamese word — it's common in abbreviations.
-        if self.flags().contains(IBFlags::DD_FREE_STYLE)
+        if f.contains(IBFlags::DD_FREE_STYLE)
             && !has_any_vietnamese_vowel(&vn_seq)
             && (vn_seq.ends_with('d') || vn_seq.contains('đ'))
         {
@@ -90,22 +91,37 @@ impl PreeditHandler {
         if check_vn_rune && !has_any_vietnamese_rune(&vn_seq) {
             return false;
         }
+        // While typing, validity is rule-based only — the dictionary needs a
+        // complete word, so it is consulted at commit time (must_fallback).
+        if !f.contains(IBFlags::SPELL_CHECK_WITH_RULES) {
+            return false;
+        }
         !self.engine.is_valid(false)
     }
 
     fn must_fallback_to_english(&self) -> bool {
-        if !self.flags().contains(IBFlags::AUTO_NON_VN_RESTORE) {
+        let f = self.flags();
+        if !f.contains(IBFlags::AUTO_NON_VN_RESTORE) || !f.contains(IBFlags::SPELL_CHECK_ENABLED) {
             return false;
         }
         let vn_seq = self.processed(Mode::VIETNAMESE | Mode::LOWERCASE);
         if vn_seq.is_empty() {
             return false;
         }
-        if self.flags().contains(IBFlags::DD_FREE_STYLE) && vn_seq.contains('đ') {
+        if f.contains(IBFlags::DD_FREE_STYLE) && vn_seq.contains('đ') {
             return false;
         }
-        // Dictionary spell-check is not wired yet; fall back to rule validation.
-        !self.engine.is_valid(true)
+        // The dictionary takes precedence: when enabled, a word must be a known
+        // dictionary entry (syllable rules alone are not enough). With only rules
+        // enabled, rule validation decides; with neither, nothing is restored.
+        match (
+            f.contains(IBFlags::SPELL_CHECK_WITH_RULES),
+            f.contains(IBFlags::SPELL_CHECK_WITH_DICTS),
+        ) {
+            (_, true) => !crate::dict::contains(&vn_seq),
+            (true, false) => !self.engine.is_valid(true),
+            (false, false) => false,
+        }
     }
 
     fn composed_string(&self, old_text: &str) -> String {
@@ -536,6 +552,22 @@ mod tests {
         let mut h = handler();
         let actions = type_keys(&mut h, "catr");
         assert_eq!(preedit_of(&actions), Some("catr"));
+    }
+
+    #[test]
+    fn disabling_spell_check_keeps_the_composition() {
+        // "tools" composes to the invalid "tôls"; with spell-check on it is
+        // restored to the raw keystrokes, and with it off the composed form is
+        // kept — so the SPELL_CHECK_ENABLED gate is observable here.
+        let actions_on = type_keys(&mut handler(), "tools");
+        assert_eq!(preedit_of(&actions_on), Some("tools"));
+
+        let cfg = Config {
+            ib_flags: IBFlags::STD.difference(IBFlags::SPELL_CHECK_ENABLED),
+            ..Config::default()
+        };
+        let actions_off = type_keys(&mut PreeditHandler::new(cfg), "tools");
+        assert_eq!(preedit_of(&actions_off), Some("tôls"));
     }
 
     #[test]
