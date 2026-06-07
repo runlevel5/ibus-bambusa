@@ -28,6 +28,7 @@ pub mod keys {
     pub const HIDE_UNDERLINE: &str = "hide-underline";
     pub const MACROS_ENABLED: &str = "macros-enabled";
     pub const AUTO_CAPITALIZE_MACROS: &str = "auto-capitalize-macros";
+    pub const MACROS: &str = "macros";
     pub const WORKAROUND_FB_MESSENGER: &str = "workaround-fb-messenger";
 }
 
@@ -44,6 +45,8 @@ pub struct Config {
     pub ib_flags: IBFlags,
     /// The single global input mode.
     pub input_mode: InputMode,
+    /// Text macros as `(shortcut, expansion)` pairs.
+    pub macros: Vec<(String, String)>,
     /// Keyboard shortcut slots: five `(state, keyval)` pairs.
     pub shortcuts: [u32; 10],
 }
@@ -56,6 +59,7 @@ impl Default for Config {
             engine_flags: EngineFlags::STD,
             ib_flags: IBFlags::STD,
             input_mode: InputMode::Preedit,
+            macros: Vec::new(),
             shortcuts: [1, 126, 0, 0, 0, 0, 0, 0, 5, 117],
         }
     }
@@ -100,12 +104,23 @@ impl Config {
             ib_flags.set(flag, settings.boolean(key));
         }
 
+        let macros = settings
+            .strv(keys::MACROS)
+            .iter()
+            .filter_map(|s| {
+                s.split_once(':')
+                    .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
+            })
+            .filter(|(k, v)| !k.is_empty() && !v.is_empty())
+            .collect();
+
         Config {
             input_method: d.input_method,
             output_charset: settings.string(keys::OUTPUT_CHARSET).to_string(),
             engine_flags,
             ib_flags,
             input_mode: InputMode::from_stored(settings.enum_(keys::INPUT_MODE)),
+            macros,
             shortcuts: d.shortcuts,
         }
     }

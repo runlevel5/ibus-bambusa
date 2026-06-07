@@ -11,11 +11,13 @@ use ibus_zbus::{Action, EngineHandler, IBusPropList, IBusProperty};
 use bambusa_config::{Config, IBFlags, InputMode};
 
 use crate::keysyms;
+use crate::macros::MacroTable;
 
 /// Composes Vietnamese text and renders it through IBus preedit.
 pub struct PreeditHandler {
     engine: BambusaEngine,
     config: Config,
+    macros: MacroTable,
     should_restore_key_strokes: bool,
 }
 
@@ -25,9 +27,11 @@ impl PreeditHandler {
             .or_else(|| parse_input_method("Telex"))
             .expect("Telex is a built-in input method");
         let engine = BambusaEngine::new(im, config.engine_flags);
+        let macros = build_macros(&config);
         Self {
             engine,
             config,
+            macros,
             should_restore_key_strokes: false,
         }
     }
@@ -141,6 +145,9 @@ impl PreeditHandler {
         if keyval == keysyms::BACKSPACE || is_word_break_symbol(key) {
             return true;
         }
+        if keyval == keysyms::TAB && self.macro_text().is_some() {
+            return true;
+        }
         self.engine.can_process_key(key)
     }
 
@@ -212,7 +219,47 @@ impl PreeditHandler {
             return (self.preedit_string(), false);
         }
 
+        // Macro processing for keys the composer can't take: keep buffering while
+        // the text is still a macro-key prefix, and expand once it is a full key.
+        if self.flags().contains(IBFlags::MACRO_ENABLED) {
+            let key_s = if is_printable {
+                key.to_string()
+            } else {
+                String::new()
+            };
+            if is_printable && self.macros.has_prefix(&format!("{old_text}{key_s}")) {
+                self.engine.process_key(key, Mode::ENGLISH);
+                return (format!("{old_text}{key_s}"), false);
+            }
+            if self.macros.has_key(&old_text) {
+                return (format!("{}{key_s}", self.expand_macro(&old_text)), true);
+            }
+        }
+
         (self.handle_non_vn_word(keyval, keycode, state), true)
+    }
+
+    /// Expand a macro key to its value, applying the typed key's case when
+    /// auto-capitalize is on (all-lower → lower, all-upper → upper).
+    fn expand_macro(&self, key: &str) -> String {
+        let value = self.macros.get(key).unwrap_or_default().to_string();
+        if !self.flags().contains(IBFlags::AUTO_CAPITALIZE_MACRO) {
+            return value;
+        }
+        match macro_case(key) {
+            MacroCase::AllLower => value.to_lowercase(),
+            MacroCase::AllUpper => value.to_uppercase(),
+            MacroCase::Mixed => value,
+        }
+    }
+
+    /// The macro expansion for the current buffer, if it is a complete macro key.
+    fn macro_text(&self) -> Option<String> {
+        if !self.flags().contains(IBFlags::MACRO_ENABLED) {
+            return None;
+        }
+        let text = self.processed(Mode::PUNCTUATION);
+        self.macros.has_key(&text).then(|| self.expand_macro(&text))
     }
 
     fn handle_non_vn_word(&mut self, keyval: u32, _keycode: u32, state: u32) -> String {
@@ -302,6 +349,8 @@ impl PreeditHandler {
             self.engine = BambusaEngine::new(im, fresh.engine_flags);
         }
         self.config = fresh;
+        // Pick up macro edits made in the preferences GUI on the same focus.
+        self.macros = build_macros(&self.config);
     }
 
     /// The property panel: a single "Preferences" button shown in the GNOME
@@ -416,6 +465,37 @@ fn offset_runes<'a>(new: &'a str, old: &str) -> (&'a str, u32) {
     (&new[byte_offset..], n_backspace)
 }
 
+/// Build the macro table for a config: the configured pairs when macros are
+/// enabled, otherwise empty (auto-capitalize is preserved either way).
+fn build_macros(config: &Config) -> MacroTable {
+    let auto_cap = config.ib_flags.contains(IBFlags::AUTO_CAPITALIZE_MACRO);
+    if config.ib_flags.contains(IBFlags::MACRO_ENABLED) {
+        MacroTable::from_entries(&config.macros, auto_cap)
+    } else {
+        MacroTable::empty(auto_cap)
+    }
+}
+
+enum MacroCase {
+    AllLower,
+    AllUpper,
+    Mixed,
+}
+
+/// The letter case of a macro key, to mirror it onto the expansion.
+fn macro_case(key: &str) -> MacroCase {
+    let letters: Vec<char> = key.chars().filter(|c| c.is_alphabetic()).collect();
+    if letters.is_empty() {
+        MacroCase::Mixed
+    } else if letters.iter().all(|c| c.is_lowercase()) {
+        MacroCase::AllLower
+    } else if letters.iter().all(|c| c.is_uppercase()) {
+        MacroCase::AllUpper
+    } else {
+        MacroCase::Mixed
+    }
+}
+
 impl EngineHandler for PreeditHandler {
     fn process_key_event(&mut self, keyval: u32, keycode: u32, state: u32) -> (bool, Vec<Action>) {
         if self.config.input_mode == InputMode::SurroundingText {
@@ -450,6 +530,9 @@ impl EngineHandler for PreeditHandler {
         }
 
         if keyval == keysyms::TAB {
+            if let Some(expansion) = self.macro_text() {
+                return (true, self.commit_and_reset(&expansion));
+            }
             let old_text = self.preedit_string();
             let composed = self.composed_string(&old_text);
             return (false, self.commit_and_reset(&composed));
@@ -568,6 +651,37 @@ mod tests {
         };
         let actions_off = type_keys(&mut PreeditHandler::new(cfg), "tools");
         assert_eq!(preedit_of(&actions_off), Some("tôls"));
+    }
+
+    #[test]
+    fn macro_expands_on_word_break() {
+        let cfg = Config {
+            ib_flags: (IBFlags::STD | IBFlags::MACRO_ENABLED)
+                .difference(IBFlags::AUTO_CAPITALIZE_MACRO),
+            ..Config::default()
+        };
+        let mut h = PreeditHandler::new(cfg);
+        h.macros = MacroTable::from_pairs(&[("vn", "Vietnam")], false);
+        type_keys(&mut h, "vn");
+        let (_, actions) = h.process_key_event(0x20, 0, 0); // space triggers expansion
+        assert!(
+            actions
+                .iter()
+                .any(|a| matches!(a, Action::CommitText(s) if s == "Vietnam "))
+        );
+    }
+
+    #[test]
+    fn macro_auto_capitalizes_to_match_the_key() {
+        let cfg = Config {
+            ib_flags: IBFlags::STD | IBFlags::MACRO_ENABLED, // STD has AUTO_CAPITALIZE_MACRO
+            ..Config::default()
+        };
+        let mut h = PreeditHandler::new(cfg);
+        h.macros = MacroTable::from_pairs(&[("vn", "Vietnam")], true);
+        assert_eq!(h.expand_macro("vn"), "vietnam"); // all-lower key → lower
+        assert_eq!(h.expand_macro("VN"), "VIETNAM"); // all-upper key → upper
+        assert_eq!(h.expand_macro("Vn"), "Vietnam"); // mixed → unchanged
     }
 
     #[test]

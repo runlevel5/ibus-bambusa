@@ -90,5 +90,35 @@ msgstr "Macro"
 msgid "Enable macros"
 msgstr "Bật macro"
 
+msgid "Expand a shortcut to its full text on Space or Tab."
+msgstr "Mở rộng chữ viết tắt thành văn bản đầy đủ khi nhấn Space hoặc Tab."
+
 msgid "Auto-capitalize macros"
 msgstr "Tự động viết hoa macro"
+
+msgid "Match the expansion's case to how you type the shortcut."
+msgstr "Khớp kiểu chữ hoa/thường của đoạn thay thế với cách bạn gõ chữ viết tắt."
+
+msgid "Edit macros"
+msgstr "Sửa macro"
+
+msgid "Import macros"
+msgstr "Nhập macro"
+
+msgid "Export macros"
+msgstr "Xuất macro"
+
+msgid "Remove"
+msgstr "Xoá"
+
+msgid "Cancel"
+msgstr "Huỷ"
+
+msgid "Add"
+msgstr "Thêm"
+
+msgid "Shortcut"
+msgstr "Chữ viết tắt"
+
+msgid "Expansion"
+msgstr "Đoạn thay thế"

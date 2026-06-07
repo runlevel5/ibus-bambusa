@@ -91,5 +91,35 @@ msgstr ""
 msgid "Enable macros"
 msgstr ""
 
+msgid "Expand a shortcut to its full text on Space or Tab."
+msgstr ""
+
 msgid "Auto-capitalize macros"
+msgstr ""
+
+msgid "Match the expansion's case to how you type the shortcut."
+msgstr ""
+
+msgid "Edit macros"
+msgstr ""
+
+msgid "Import macros"
+msgstr ""
+
+msgid "Export macros"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Add"
+msgstr ""
+
+msgid "Shortcut"
+msgstr ""
+
+msgid "Expansion"
 msgstr ""

@@ -4,6 +4,7 @@
 mod dict;
 mod engines;
 mod keysyms;
+mod macros;
 mod preedit;
 
 use bambusa_config::Config;

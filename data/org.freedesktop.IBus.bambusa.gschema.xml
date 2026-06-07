@@ -59,6 +59,11 @@
       <default>true</default>
       <summary>Auto-capitalize macros</summary>
     </key>
+    <key name="macros" type="as">
+      <default>[]</default>
+      <summary>Macro definitions</summary>
+      <description>Text macros as "shortcut:expansion" strings.</description>
+    </key>
     <key name="workaround-fb-messenger" type="b">
       <default>false</default>
       <summary>Workaround for Facebook Messenger</summary>
