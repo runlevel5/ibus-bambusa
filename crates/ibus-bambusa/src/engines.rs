@@ -3,18 +3,22 @@
 //! Each entry is a separate IBus input source, so GNOME switches between
 //! methods (and remembers them per window) with its own Super+Space mechanism —
 //! we just map the engine name IBus hands `CreateEngine` back to a method.
+//!
+//! Engine names share the `bambusa:` family prefix so GNOME resolves a single
+//! `ibus-setup-bambusa.desktop` for the Settings "Preferences" button (it uses
+//! the part of the name before the colon).
 
 /// `(ibus engine name, bambusa-core input method name)`. The method names must
 /// match the built-in methods exactly.
 pub const ENGINES: &[(&str, &str)] = &[
-    ("Bambusa", "Telex"),
-    ("BambusaTelexW", "Telex W"),
-    ("BambusaTelex2", "Telex 2"),
-    ("BambusaVNI", "VNI"),
-    ("BambusaVIQR", "VIQR"),
-    ("BambusaMicrosoft", "Microsoft layout"),
-    ("BambusaVNIAzerty", "VNI (AZERTY)"),
-    ("BambusaVNIAfnor", "VNI (AZERTY, AFNOR)"),
+    ("bambusa:telex", "Telex"),
+    ("bambusa:telexw", "Telex W"),
+    ("bambusa:telex2", "Telex 2"),
+    ("bambusa:vni", "VNI"),
+    ("bambusa:viqr", "VIQR"),
+    ("bambusa:microsoft", "Microsoft layout"),
+    ("bambusa:vni-azerty", "VNI (AZERTY)"),
+    ("bambusa:vni-afnor", "VNI (AZERTY, AFNOR)"),
 ];
 
 /// The input method for an IBus engine name, defaulting to Telex.
@@ -31,9 +35,9 @@ mod tests {
 
     #[test]
     fn maps_engine_names_to_methods() {
-        assert_eq!(method_for_engine("Bambusa"), "Telex");
-        assert_eq!(method_for_engine("BambusaVNI"), "VNI");
-        assert_eq!(method_for_engine("BambusaVNIAzerty"), "VNI (AZERTY)");
+        assert_eq!(method_for_engine("bambusa:telex"), "Telex");
+        assert_eq!(method_for_engine("bambusa:vni"), "VNI");
+        assert_eq!(method_for_engine("bambusa:vni-azerty"), "VNI (AZERTY)");
         assert_eq!(method_for_engine("anything-else"), "Telex");
     }
 

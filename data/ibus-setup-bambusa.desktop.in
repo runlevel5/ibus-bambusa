@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Bambusa Preferences
+Comment=Configure the Bambusa Vietnamese input method
+Exec=@libexecdir@/ibus-bambusa/ibus-setup-bambusa
+Icon=@datadir@/ibus-bambusa/icons/vi.svg
+Terminal=false
+NoDisplay=true
+Categories=Settings;

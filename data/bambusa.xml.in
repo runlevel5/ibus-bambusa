@@ -11,7 +11,7 @@
     <engines>
         <engine>
             <symbol>ợ</symbol>
-            <name>Bambusa</name>
+            <name>bambusa:telex</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -24,7 +24,7 @@
         </engine>
         <engine>
             <symbol>ữ</symbol>
-            <name>BambusaTelexW</name>
+            <name>bambusa:telexw</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -37,7 +37,7 @@
         </engine>
         <engine>
             <symbol>ỡ</symbol>
-            <name>BambusaTelex2</name>
+            <name>bambusa:telex2</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -50,7 +50,7 @@
         </engine>
         <engine>
             <symbol>ể</symbol>
-            <name>BambusaVNI</name>
+            <name>bambusa:vni</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -63,7 +63,7 @@
         </engine>
         <engine>
             <symbol>ẫ</symbol>
-            <name>BambusaVIQR</name>
+            <name>bambusa:viqr</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -76,7 +76,7 @@
         </engine>
         <engine>
             <symbol>ì</symbol>
-            <name>BambusaMicrosoft</name>
+            <name>bambusa:microsoft</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -89,7 +89,7 @@
         </engine>
         <engine>
             <symbol>ệ</symbol>
-            <name>BambusaVNIAzerty</name>
+            <name>bambusa:vni-azerty</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>
@@ -102,7 +102,7 @@
         </engine>
         <engine>
             <symbol>ặ</symbol>
-            <name>BambusaVNIAfnor</name>
+            <name>bambusa:vni-afnor</name>
             <language>vi</language>
             <license>MIT</license>
             <author>Trung Lê</author>

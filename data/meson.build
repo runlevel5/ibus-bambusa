@@ -17,6 +17,16 @@ install_data(
     install_dir: datadir / 'ibus-bambusa' / 'icons',
 )
 
+# Desktop entry GNOME Settings launches for the engine "Preferences" button
+# (it looks up ibus-setup-<engine-family>.desktop, i.e. ibus-setup-bambusa).
+configure_file(
+    input: 'ibus-setup-bambusa.desktop.in',
+    output: 'ibus-setup-bambusa.desktop',
+    configuration: conf,
+    install: true,
+    install_dir: datadir / 'applications',
+)
+
 # GSettings schema: install it and (re)compile the schema cache.
 gnome = import('gnome')
 install_data(
