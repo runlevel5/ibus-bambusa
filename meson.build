@@ -1,12 +1,13 @@
 project(
     'ibus-bambusa',
     version: '0.1.0',
-    license: 'GPLv3',
+    license: 'MIT',
     meson_version: '>= 0.61.0',
 )
 
 cargo = find_program('cargo')
 cargo_build = find_program('build-aux/cargo-build.sh')
+i18n = import('i18n')
 
 prefix = get_option('prefix')
 libexecdir = prefix / get_option('libexecdir')
@@ -53,3 +54,4 @@ custom_target(
 )
 
 subdir('data')
+subdir('po')

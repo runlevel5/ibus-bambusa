@@ -1,0 +1,77 @@
+# Translation template for ibus-bambusa.
+# Copyright (C) 2025 Trung Lê
+# This file is distributed under the same license as the ibus-bambusa package.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ibus-bambusa\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. The preferences menu item shown in the GNOME input menu.
+msgid "Preferences"
+msgstr ""
+
+msgid "Bambusa Preferences"
+msgstr ""
+
+msgid "Output"
+msgstr ""
+
+msgid "Character set"
+msgstr ""
+
+msgid "Tone marking"
+msgstr ""
+
+msgid "Free tone marking"
+msgstr ""
+
+msgid "Accept tone marks anywhere in the word, not only after the vowel."
+msgstr ""
+
+msgid "Modern tone placement"
+msgstr ""
+
+msgid "Place the tone on the second vowel in cases like “oa”, “uy” (hoà, not hòa)."
+msgstr ""
+
+msgid "Spell checking"
+msgstr ""
+
+msgid "Check spelling"
+msgstr ""
+
+msgid "Fall back to the raw keystrokes when a word is not valid Vietnamese."
+msgstr ""
+
+msgid "Use spelling rules"
+msgstr ""
+
+msgid "Use dictionary"
+msgstr ""
+
+msgid "Behaviour"
+msgstr ""
+
+msgid "Restore non-Vietnamese words"
+msgstr ""
+
+msgid "Undo composition automatically for words that are not Vietnamese."
+msgstr ""
+
+msgid "Hide preedit underline"
+msgstr ""
+
+msgid "Macros"
+msgstr ""
+
+msgid "Enable macros"
+msgstr ""
+
+msgid "Auto-capitalize macros"
+msgstr ""

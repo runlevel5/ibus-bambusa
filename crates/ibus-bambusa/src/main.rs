@@ -6,10 +6,13 @@ mod keysyms;
 mod preedit;
 
 use bambusa_config::Config;
+use gettextrs::{LocaleCategory, bind_textdomain_codeset, bindtextdomain, setlocale, textdomain};
 use ibus_zbus::{EngineHandler, Factory, address, consts};
 use preedit::PreeditHandler;
 
 const BUS_NAME: &str = "org.freedesktop.IBus.bambusa";
+const GETTEXT_DOMAIN: &str = "ibus-bambusa";
+const LOCALEDIR: &str = "/usr/share/locale";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,6 +20,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
+
+    setlocale(LocaleCategory::LcAll, "");
+    let _ = bindtextdomain(GETTEXT_DOMAIN, LOCALEDIR);
+    let _ = bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8");
+    let _ = textdomain(GETTEXT_DOMAIN);
 
     let config = Config::load();
 

@@ -18,3 +18,4 @@ bambusa-config = { path = "../bambusa-config" }
 ibus-zbus = { path = "../ibus-zbus" }
 zbus.workspace = true
 tokio.workspace = true
+gettext-rs = { workspace = true }

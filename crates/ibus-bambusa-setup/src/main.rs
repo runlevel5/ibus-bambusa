@@ -7,6 +7,9 @@
 use adw::prelude::*;
 use bambusa_config::{SCHEMA_ID, keys};
 use bambusa_core::charset_names;
+use gettextrs::{
+    LocaleCategory, bind_textdomain_codeset, bindtextdomain, gettext, setlocale, textdomain,
+};
 use gtk::StringList;
 use gtk::gio::prelude::*;
 use gtk::gio::{ApplicationFlags, Settings};
@@ -14,8 +17,18 @@ use gtk::glib::ExitCode;
 use libadwaita as adw;
 
 const APP_ID: &str = "org.freedesktop.IBus.bambusa.setup";
+const GETTEXT_DOMAIN: &str = "ibus-bambusa";
+const LOCALEDIR: &str = "/usr/share/locale";
+
+fn init_i18n() {
+    setlocale(LocaleCategory::LcAll, "");
+    let _ = bindtextdomain(GETTEXT_DOMAIN, LOCALEDIR);
+    let _ = bind_textdomain_codeset(GETTEXT_DOMAIN, "UTF-8");
+    let _ = textdomain(GETTEXT_DOMAIN);
+}
 
 fn main() {
+    init_i18n();
     // IBus and GNOME launch the setup with an extra argv[1] (the basename, per
     // ibus-setup's convention); HANDLES_COMMAND_LINE lets us accept and ignore
     // any arguments instead of bailing out as the default flags would.
@@ -48,7 +61,7 @@ fn build_ui(app: &adw::Application) {
     let output = group("Output");
     let charsets = charset_names();
     let charset_row = adw::ComboRow::builder()
-        .title("Character set")
+        .title(gettext("Character set"))
         .model(&StringList::new(&charsets))
         .build();
     let current: String = settings.string(keys::OUTPUT_CHARSET).into();
@@ -151,7 +164,7 @@ fn build_ui(app: &adw::Application) {
 
     adw::ApplicationWindow::builder()
         .application(app)
-        .title("Bambusa Preferences")
+        .title(gettext("Bambusa Preferences"))
         .default_width(460)
         .default_height(640)
         .content(&toolbar)
@@ -160,7 +173,9 @@ fn build_ui(app: &adw::Application) {
 }
 
 fn group(title: &str) -> adw::PreferencesGroup {
-    adw::PreferencesGroup::builder().title(title).build()
+    adw::PreferencesGroup::builder()
+        .title(gettext(title))
+        .build()
 }
 
 /// A switch row bound two-way to a boolean GSettings key.
@@ -171,9 +186,9 @@ fn add_switch(
     subtitle: &str,
     key: &str,
 ) {
-    let row = adw::SwitchRow::builder().title(title).build();
+    let row = adw::SwitchRow::builder().title(gettext(title)).build();
     if !subtitle.is_empty() {
-        row.set_subtitle(subtitle);
+        row.set_subtitle(&gettext(subtitle));
     }
     settings.bind(key, &row, "active").build();
     group.add(&row);

@@ -5,6 +5,7 @@ use bambusa_core::{
     BambusaEngine, Mode, encode, has_any_vietnamese_rune, has_any_vietnamese_vowel,
     is_word_break_symbol, parse_input_method,
 };
+use gettextrs::gettext;
 use ibus_zbus::{Action, EngineHandler, IBusPropList, IBusProperty};
 
 use bambusa_config::{Config, IBFlags};
@@ -290,7 +291,7 @@ impl PreeditHandler {
     /// The property panel: a single "Preferences" button shown in the GNOME
     /// input menu. Activating it launches the setup GUI.
     fn setup_property(&self) -> Action {
-        let prefs = IBusProperty::normal("setup", "Preferences");
+        let prefs = IBusProperty::normal("setup", &gettext("Preferences"));
         Action::RegisterProperties(Box::new(IBusPropList::new(vec![prefs])))
     }
 

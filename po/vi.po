@@ -1,0 +1,76 @@
+# Vietnamese translation for ibus-bambusa.
+# Copyright (C) 2025 Trung Lê
+# This file is distributed under the same license as the ibus-bambusa package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ibus-bambusa\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: vi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. The preferences menu item shown in the GNOME input menu.
+msgid "Preferences"
+msgstr "Tùy chỉnh"
+
+msgid "Bambusa Preferences"
+msgstr "Tùy chỉnh Bambusa"
+
+msgid "Output"
+msgstr "Đầu ra"
+
+msgid "Character set"
+msgstr "Bộ ký tự"
+
+msgid "Tone marking"
+msgstr "Đánh dấu thanh"
+
+msgid "Free tone marking"
+msgstr "Đánh dấu thanh tự do"
+
+msgid "Accept tone marks anywhere in the word, not only after the vowel."
+msgstr "Chấp nhận dấu thanh ở bất kỳ đâu trong từ, không chỉ sau nguyên âm."
+
+msgid "Modern tone placement"
+msgstr "Đặt dấu thanh kiểu mới"
+
+msgid "Place the tone on the second vowel in cases like “oa”, “uy” (hoà, not hòa)."
+msgstr "Đặt dấu thanh trên nguyên âm thứ hai trong các trường hợp như “oa”, “uy” (hoà, không phải hòa)."
+
+msgid "Spell checking"
+msgstr "Kiểm tra chính tả"
+
+msgid "Check spelling"
+msgstr "Bật kiểm tra chính tả"
+
+msgid "Fall back to the raw keystrokes when a word is not valid Vietnamese."
+msgstr "Trở về các phím gõ thô khi từ không phải tiếng Việt hợp lệ."
+
+msgid "Use spelling rules"
+msgstr "Dùng quy tắc chính tả"
+
+msgid "Use dictionary"
+msgstr "Dùng từ điển"
+
+msgid "Behaviour"
+msgstr "Hành vi"
+
+msgid "Restore non-Vietnamese words"
+msgstr "Khôi phục từ không phải tiếng Việt"
+
+msgid "Undo composition automatically for words that are not Vietnamese."
+msgstr "Tự động hoàn tác khi từ không phải tiếng Việt."
+
+msgid "Hide preedit underline"
+msgstr "Ẩn gạch chân khi soạn thảo"
+
+msgid "Macros"
+msgstr "Macro"
+
+msgid "Enable macros"
+msgstr "Bật macro"
+
+msgid "Auto-capitalize macros"
+msgstr "Tự động viết hoa macro"
