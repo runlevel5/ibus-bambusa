@@ -5,7 +5,7 @@
     <exec>@libexecdir@/ibus-bambusa/ibus-engine-bambusa --ibus</exec>
     <version>@version@</version>
     <author>Trung Lê</author>
-    <license>MIT</license>
+    <license>GPL-3.0-or-later</license>
     <homepage>https://github.com/runlevel5/ibus-bambusa</homepage>
     <textdomain>ibus-bambusa</textdomain>
     <engines>
@@ -13,7 +13,7 @@
             <symbol>ợ</symbol>
             <name>bambusa:telex</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>default</layout>
@@ -26,7 +26,7 @@
             <symbol>ữ</symbol>
             <name>bambusa:telexw</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>default</layout>
@@ -39,7 +39,7 @@
             <symbol>ỡ</symbol>
             <name>bambusa:telex2</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>default</layout>
@@ -52,7 +52,7 @@
             <symbol>ể</symbol>
             <name>bambusa:vni</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>us</layout>
@@ -65,7 +65,7 @@
             <symbol>ẫ</symbol>
             <name>bambusa:viqr</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>us</layout>
@@ -78,7 +78,7 @@
             <symbol>ì</symbol>
             <name>bambusa:microsoft</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>us</layout>
@@ -91,7 +91,7 @@
             <symbol>ệ</symbol>
             <name>bambusa:vni-azerty</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>fr</layout>
@@ -104,7 +104,7 @@
             <symbol>ặ</symbol>
             <name>bambusa:vni-afnor</name>
             <language>vi</language>
-            <license>MIT</license>
+            <license>GPL-3.0-or-later</license>
             <author>Trung Lê</author>
             <icon>@datadir@/ibus-bambusa/icons/vi.svg</icon>
             <layout>fr</layout>
