@@ -24,6 +24,18 @@ msgstr "Đầu ra"
 msgid "Character set"
 msgstr "Bộ ký tự"
 
+msgid "Input"
+msgstr "Đầu vào"
+
+msgid "Input mode"
+msgstr "Chế độ nhập"
+
+msgid "Preedit"
+msgstr "Soạn thảo trước"
+
+msgid "Surrounding text"
+msgstr "Văn bản xung quanh"
+
 msgid "Tone marking"
 msgstr "Đánh dấu thanh"
 

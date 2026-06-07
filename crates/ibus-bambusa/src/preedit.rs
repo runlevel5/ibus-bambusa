@@ -8,7 +8,7 @@ use bambusa_core::{
 use gettextrs::gettext;
 use ibus_zbus::{Action, EngineHandler, IBusPropList, IBusProperty};
 
-use bambusa_config::{Config, IBFlags};
+use bambusa_config::{Config, IBFlags, InputMode};
 
 use crate::keysyms;
 
@@ -310,10 +310,101 @@ impl PreeditHandler {
             });
         }
     }
+
+    /// Surrounding-text delivery: instead of showing preedit, commit the
+    /// composition incrementally and rewrite it via DeleteSurroundingText as it
+    /// changes — for clients that handle surrounding text but not preedit well.
+    fn process_key_surrounding(
+        &mut self,
+        keyval: u32,
+        keycode: u32,
+        state: u32,
+    ) -> (bool, Vec<Action>) {
+        if keysyms::is_release(state) {
+            return (false, Vec::new());
+        }
+        let raw_key_len = self.raw_key_len();
+        let key = char::from_u32(keyval).unwrap_or('\0');
+        // The text currently in the client equals the composition we last sent.
+        let old_text = self.preedit_string();
+
+        if !self.should_restore_key_strokes
+            && !self.engine.can_process_key(key)
+            && raw_key_len == 0
+            && !self.flags().contains(IBFlags::MACRO_ENABLED)
+        {
+            return (false, Vec::new());
+        }
+
+        if keyval == keysyms::BACKSPACE {
+            if raw_key_len > 0 {
+                self.engine.remove_last_char(true);
+                let new_text = self.preedit_string();
+                return (true, self.update_previous_text(&old_text, &new_text));
+            }
+            // Nothing composed: let the client delete a real character.
+            return (false, Vec::new());
+        }
+
+        if keyval == keysyms::TAB {
+            self.engine.reset();
+            return (false, Vec::new());
+        }
+
+        let (new_text, is_word_break) = self.commit_text(keyval, keycode, state);
+        let is_printable = self.is_printable_key(state, keyval);
+        let actions = self.update_previous_text(&old_text, &new_text);
+        if is_word_break {
+            self.engine.reset();
+        }
+        (is_printable, actions)
+    }
+
+    /// Rewrite the client text from `old` to `new` (both composed): delete the
+    /// changed trailing characters and commit the new ones, in the charset.
+    fn update_previous_text(&self, old: &str, new: &str) -> Vec<Action> {
+        let old_enc = self.encode_text(old);
+        let new_enc = self.encode_text(new);
+        let (suffix, n_backspace) = offset_runes(&new_enc, &old_enc);
+        let mut actions = Vec::new();
+        if n_backspace > 0 {
+            actions.push(self.send_backspace(n_backspace));
+        }
+        if !suffix.is_empty() {
+            actions.push(Action::CommitText(suffix.to_string()));
+        }
+        actions
+    }
+
+    /// Delete `n` characters before the cursor for the active input mode.
+    fn send_backspace(&self, n: u32) -> Action {
+        Action::DeleteSurroundingText {
+            offset: -(n as i32),
+            nchars: n,
+        }
+    }
+}
+
+/// Common-prefix diff: the differing suffix of `new`, and how many trailing
+/// characters of `old` to delete to reach it.
+fn offset_runes<'a>(new: &'a str, old: &str) -> (&'a str, u32) {
+    let new_chars: Vec<char> = new.chars().collect();
+    let old_chars: Vec<char> = old.chars().collect();
+    let min = new_chars.len().min(old_chars.len());
+    let mut offset = 0;
+    while offset < min && new_chars[offset] == old_chars[offset] {
+        offset += 1;
+    }
+    let n_backspace = (old_chars.len() - offset) as u32;
+    let byte_offset = new.char_indices().nth(offset).map_or(new.len(), |(i, _)| i);
+    (&new[byte_offset..], n_backspace)
 }
 
 impl EngineHandler for PreeditHandler {
     fn process_key_event(&mut self, keyval: u32, keycode: u32, state: u32) -> (bool, Vec<Action>) {
+        if self.config.input_mode == InputMode::SurroundingText {
+            return self.process_key_surrounding(keyval, keycode, state);
+        }
         if keysyms::is_release(state) {
             return (false, Vec::new());
         }
@@ -362,6 +453,9 @@ impl EngineHandler for PreeditHandler {
     fn focus_in(&mut self) -> Vec<Action> {
         self.reload_config();
         let mut actions = vec![self.setup_property()];
+        if self.config.input_mode == InputMode::SurroundingText {
+            actions.push(Action::RequireSurroundingText);
+        }
         actions.append(&mut self.reset());
         actions
     }
@@ -442,5 +536,37 @@ mod tests {
         let mut h = handler();
         let actions = type_keys(&mut h, "catr");
         assert_eq!(preedit_of(&actions), Some("catr"));
+    }
+
+    #[test]
+    fn offset_runes_computes_diff() {
+        assert_eq!(offset_runes("á", "a"), ("á", 1));
+        assert_eq!(offset_runes("tiếng ", "tiếng"), (" ", 0));
+        assert_eq!(offset_runes("", "a"), ("", 1));
+        assert_eq!(offset_runes("abc", "abc"), ("", 0));
+    }
+
+    #[test]
+    fn surrounding_text_rewrites_via_diff() {
+        let cfg = Config {
+            input_mode: InputMode::SurroundingText,
+            ..Config::default()
+        };
+        let mut h = PreeditHandler::new(cfg);
+        // Telex: 'a' commits "a"; 's' (acute) deletes it and commits "á".
+        let (_, a1) = h.process_key_event('a' as u32, 0, 0);
+        let (_, a2) = h.process_key_event('s' as u32, 0, 0);
+        assert!(
+            a1.iter()
+                .any(|x| matches!(x, Action::CommitText(t) if t.as_str() == "a"))
+        );
+        assert!(
+            a2.iter()
+                .any(|x| matches!(x, Action::DeleteSurroundingText { nchars, .. } if *nchars == 1))
+        );
+        assert!(
+            a2.iter()
+                .any(|x| matches!(x, Action::CommitText(t) if t.as_str() == "á"))
+        );
     }
 }

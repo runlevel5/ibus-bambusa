@@ -79,6 +79,32 @@ fn build_ui(app: &adw::Application) {
     output.add(&charset_row);
     page.add(&output);
 
+    // Input mode. Enum values: preedit=1, surrounding-text=2 (others not yet
+    // exposed in the UI).
+    const MODES: [i32; 2] = [1, 2];
+    let input = group("Input");
+    let preedit_label = gettext("Preedit");
+    let surrounding_label = gettext("Surrounding text");
+    let mode_row = adw::ComboRow::builder()
+        .title(gettext("Input mode"))
+        .model(&StringList::new(&[
+            preedit_label.as_str(),
+            surrounding_label.as_str(),
+        ]))
+        .build();
+    let cur = settings.enum_(keys::INPUT_MODE);
+    mode_row.set_selected(MODES.iter().position(|&m| m == cur).unwrap_or(0) as u32);
+    {
+        let settings = settings.clone();
+        mode_row.connect_selected_notify(move |row| {
+            if let Some(&m) = MODES.get(row.selected() as usize) {
+                let _ = settings.set_enum(keys::INPUT_MODE, m);
+            }
+        });
+    }
+    input.add(&mode_row);
+    page.add(&input);
+
     // Tone marking.
     let tones = group("Tone marking");
     add_switch(

@@ -25,6 +25,18 @@ msgstr ""
 msgid "Character set"
 msgstr ""
 
+msgid "Input"
+msgstr ""
+
+msgid "Input mode"
+msgstr ""
+
+msgid "Preedit"
+msgstr ""
+
+msgid "Surrounding text"
+msgstr ""
+
 msgid "Tone marking"
 msgstr ""
 
