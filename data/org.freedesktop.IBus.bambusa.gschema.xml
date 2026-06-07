@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.freedesktop.IBus.bambusa.InputMode">
+    <value nick="preedit" value="1"/>
+    <value nick="surrounding-text" value="2"/>
+    <value nick="backspace-forwarding" value="3"/>
+    <value nick="shift-left-forwarding" value="4"/>
+    <value nick="forward-as-commit" value="5"/>
+    <value nick="us" value="7"/>
+  </enum>
+  <schema id="org.freedesktop.IBus.bambusa" path="/org/freedesktop/ibus/bambusa/">
+    <key name="output-charset" type="s">
+      <default>'Unicode'</default>
+      <summary>Output character set</summary>
+      <description>Encoding used for committed text.</description>
+    </key>
+    <key name="input-mode" enum="org.freedesktop.IBus.bambusa.InputMode">
+      <default>'preedit'</default>
+      <summary>Input mode</summary>
+      <description>How composed text is delivered to the application.</description>
+    </key>
+    <key name="free-tone-marking" type="b">
+      <default>true</default>
+      <summary>Free tone marking</summary>
+    </key>
+    <key name="modern-tone-style" type="b">
+      <default>true</default>
+      <summary>Modern tone placement</summary>
+    </key>
+    <key name="spell-check" type="b">
+      <default>true</default>
+      <summary>Check spelling</summary>
+    </key>
+    <key name="spell-check-rules" type="b">
+      <default>true</default>
+      <summary>Use spelling rules</summary>
+    </key>
+    <key name="spell-check-dicts" type="b">
+      <default>false</default>
+      <summary>Use dictionary</summary>
+    </key>
+    <key name="auto-restore-non-vn" type="b">
+      <default>true</default>
+      <summary>Restore non-Vietnamese words</summary>
+    </key>
+    <key name="dd-free-style" type="b">
+      <default>true</default>
+      <summary>Allow dd outside Vietnamese words</summary>
+    </key>
+    <key name="hide-underline" type="b">
+      <default>true</default>
+      <summary>Hide preedit underline</summary>
+    </key>
+    <key name="macros-enabled" type="b">
+      <default>false</default>
+      <summary>Enable macros</summary>
+    </key>
+    <key name="auto-capitalize-macros" type="b">
+      <default>true</default>
+      <summary>Auto-capitalize macros</summary>
+    </key>
+    <key name="workaround-fb-messenger" type="b">
+      <default>false</default>
+      <summary>Workaround for Facebook Messenger</summary>
+    </key>
+  </schema>
+</schemalist>

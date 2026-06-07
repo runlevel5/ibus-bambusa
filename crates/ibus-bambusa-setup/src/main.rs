@@ -1,22 +1,19 @@
 //! Preferences GUI for ibus-bambusa.
 //!
-//! A small libadwaita window over the shared `Config`. Each row writes the
-//! change straight back to the config file the engine reads, so settings take
-//! effect on the next focus/restart.
-
-use std::cell::RefCell;
-use std::rc::Rc;
+//! A small libadwaita window bound directly to the GSettings (dconf) schema the
+//! engine reads. Switches use `Settings::bind`, so toggling a row writes the
+//! key immediately; the engine picks it up on the next focus.
 
 use adw::prelude::*;
-use bambusa_config::{Config, IBFlags};
-use bambusa_core::{EngineFlags, charset_names};
+use bambusa_config::{SCHEMA_ID, keys};
+use bambusa_core::charset_names;
 use gtk::StringList;
-use gtk::gio::ApplicationFlags;
+use gtk::gio::prelude::*;
+use gtk::gio::{ApplicationFlags, Settings};
+use gtk::glib::ExitCode;
 use libadwaita as adw;
 
 const APP_ID: &str = "org.freedesktop.IBus.bambusa.setup";
-
-type Shared = Rc<RefCell<Config>>;
 
 fn main() {
     // IBus and GNOME launch the setup with an extra argv[1] (the basename, per
@@ -28,7 +25,7 @@ fn main() {
         .build();
     app.connect_command_line(|app, _cmdline| {
         app.activate();
-        0
+        ExitCode::SUCCESS
     });
     app.connect_activate(|app| {
         // Single-instance: launching again (clicking Preferences repeatedly)
@@ -44,28 +41,25 @@ fn main() {
 }
 
 fn build_ui(app: &adw::Application) {
-    let config: Shared = Rc::new(RefCell::new(Config::load()));
+    let settings = Settings::new(SCHEMA_ID);
     let page = adw::PreferencesPage::new();
 
     // Output charset.
-    let output = adw::PreferencesGroup::builder().title("Output").build();
+    let output = group("Output");
     let charsets = charset_names();
     let charset_row = adw::ComboRow::builder()
         .title("Character set")
         .model(&StringList::new(&charsets))
         .build();
-    if let Some(idx) = charsets
-        .iter()
-        .position(|c| *c == config.borrow().output_charset)
-    {
+    let current: String = settings.string(keys::OUTPUT_CHARSET).into();
+    if let Some(idx) = charsets.iter().position(|c| *c == current.as_str()) {
         charset_row.set_selected(idx as u32);
     }
     {
-        let config = config.clone();
+        let settings = settings.clone();
         charset_row.connect_selected_notify(move |row| {
             if let Some(name) = charset_names().get(row.selected() as usize) {
-                config.borrow_mut().output_charset = name.to_string();
-                let _ = config.borrow().save();
+                let _ = settings.set_string(keys::OUTPUT_CHARSET, name);
             }
         });
     }
@@ -73,85 +67,81 @@ fn build_ui(app: &adw::Application) {
     page.add(&output);
 
     // Tone marking.
-    let tones = adw::PreferencesGroup::builder()
-        .title("Tone marking")
-        .build();
-    engine_switch(
+    let tones = group("Tone marking");
+    add_switch(
         &tones,
-        &config,
+        &settings,
         "Free tone marking",
         "Accept tone marks anywhere in the word, not only after the vowel.",
-        EngineFlags::FREE_TONE_MARKING,
+        keys::FREE_TONE_MARKING,
     );
-    engine_switch(
+    add_switch(
         &tones,
-        &config,
+        &settings,
         "Modern tone placement",
         "Place the tone on the second vowel in cases like “oa”, “uy” (hoà, not hòa).",
-        EngineFlags::STD_TONE_STYLE,
+        keys::MODERN_TONE_STYLE,
     );
     page.add(&tones);
 
     // Spell checking.
-    let spell = adw::PreferencesGroup::builder()
-        .title("Spell checking")
-        .build();
-    ib_switch(
+    let spell = group("Spell checking");
+    add_switch(
         &spell,
-        &config,
+        &settings,
         "Check spelling",
         "Fall back to the raw keystrokes when a word is not valid Vietnamese.",
-        IBFlags::SPELL_CHECK_ENABLED,
+        keys::SPELL_CHECK,
     );
-    ib_switch(
+    add_switch(
         &spell,
-        &config,
+        &settings,
         "Use spelling rules",
         "",
-        IBFlags::SPELL_CHECK_WITH_RULES,
+        keys::SPELL_CHECK_RULES,
     );
-    ib_switch(
+    add_switch(
         &spell,
-        &config,
+        &settings,
         "Use dictionary",
         "",
-        IBFlags::SPELL_CHECK_WITH_DICTS,
+        keys::SPELL_CHECK_DICTS,
     );
     page.add(&spell);
 
     // Behaviour.
-    let behaviour = adw::PreferencesGroup::builder().title("Behaviour").build();
-    ib_switch(
+    let behaviour = group("Behaviour");
+    add_switch(
         &behaviour,
-        &config,
+        &settings,
         "Restore non-Vietnamese words",
         "Undo composition automatically for words that are not Vietnamese.",
-        IBFlags::AUTO_NON_VN_RESTORE,
+        keys::AUTO_RESTORE_NON_VN,
     );
-    ib_switch(
+    add_switch(
         &behaviour,
-        &config,
+        &settings,
         "Hide preedit underline",
         "",
-        IBFlags::NO_UNDERLINE,
+        keys::HIDE_UNDERLINE,
     );
     page.add(&behaviour);
 
     // Macros.
-    let macros = adw::PreferencesGroup::builder().title("Macros").build();
-    ib_switch(
+    let macros = group("Macros");
+    add_switch(
         &macros,
-        &config,
+        &settings,
         "Enable macros",
         "",
-        IBFlags::MACRO_ENABLED,
+        keys::MACROS_ENABLED,
     );
-    ib_switch(
+    add_switch(
         &macros,
-        &config,
+        &settings,
         "Auto-capitalize macros",
         "",
-        IBFlags::AUTO_CAPITALIZE_MACRO,
+        keys::AUTO_CAPITALIZE_MACROS,
     );
     page.add(&macros);
 
@@ -169,48 +159,22 @@ fn build_ui(app: &adw::Application) {
         .present();
 }
 
-/// A switch row bound to an `IBFlags` bit.
-fn ib_switch(
-    group: &adw::PreferencesGroup,
-    config: &Shared,
-    title: &str,
-    subtitle: &str,
-    flag: IBFlags,
-) {
-    let row = adw::SwitchRow::builder()
-        .title(title)
-        .active(config.borrow().ib_flags.contains(flag))
-        .build();
-    if !subtitle.is_empty() {
-        row.set_subtitle(subtitle);
-    }
-    let config = config.clone();
-    row.connect_active_notify(move |row| {
-        config.borrow_mut().ib_flags.set(flag, row.is_active());
-        let _ = config.borrow().save();
-    });
-    group.add(&row);
+fn group(title: &str) -> adw::PreferencesGroup {
+    adw::PreferencesGroup::builder().title(title).build()
 }
 
-/// A switch row bound to an `EngineFlags` bit.
-fn engine_switch(
+/// A switch row bound two-way to a boolean GSettings key.
+fn add_switch(
     group: &adw::PreferencesGroup,
-    config: &Shared,
+    settings: &Settings,
     title: &str,
     subtitle: &str,
-    flag: EngineFlags,
+    key: &str,
 ) {
-    let row = adw::SwitchRow::builder()
-        .title(title)
-        .active(config.borrow().engine_flags.contains(flag))
-        .build();
+    let row = adw::SwitchRow::builder().title(title).build();
     if !subtitle.is_empty() {
         row.set_subtitle(subtitle);
     }
-    let config = config.clone();
-    row.connect_active_notify(move |row| {
-        config.borrow_mut().engine_flags.set(flag, row.is_active());
-        let _ = config.borrow().save();
-    });
+    settings.bind(key, &row, "active").build();
     group.add(&row);
 }
