@@ -75,9 +75,11 @@ impl Config {
             EngineFlags::FREE_TONE_MARKING,
             settings.boolean(keys::FREE_TONE_MARKING),
         );
+        // STD_TONE_STYLE is the *old* first-vowel placement (hòa); the
+        // "modern tone placement" key is its inverse (hoà on the second vowel).
         engine_flags.set(
             EngineFlags::STD_TONE_STYLE,
-            settings.boolean(keys::MODERN_TONE_STYLE),
+            !settings.boolean(keys::MODERN_TONE_STYLE),
         );
 
         let mut ib_flags = IBFlags::empty();
