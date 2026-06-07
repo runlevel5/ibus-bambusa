@@ -16,7 +16,7 @@ Wayland supports well, and nothing else:
   detection (GNOME no longer exposes the focused window to do this safely).
 - **Full charset output**: Unicode plus the legacy Vietnamese encodings
   (TCVN3, VNI-Win, VIQR, VISCII, VPS, BK HCM, Vietware, NCR, …).
-- **No GUI.** Configuration lives in a config file and the IBus property menu.
+- **Native GUI.** Configuration lives in GSettings/dconf exposed via native GNOME GUI
 
 If you need the full feature set (X11, every charset, the emoji picker, a
 settings GUI), use the original [ibus-bamboo](https://github.com/BambooEngine/ibus-bamboo).
