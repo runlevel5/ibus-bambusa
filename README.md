@@ -69,4 +69,4 @@ ibus restart
 
 ## License
 
-MIT
+GPLv3

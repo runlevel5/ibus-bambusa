@@ -1,7 +1,7 @@
 project(
     'ibus-bambusa',
     version: '0.1.0',
-    license: 'MIT',
+    license: 'GPLv3',
     meson_version: '>= 0.61.0',
 )
 
