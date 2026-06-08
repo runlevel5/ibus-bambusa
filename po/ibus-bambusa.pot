@@ -19,10 +19,34 @@ msgstr ""
 msgid "Bambusa Preferences"
 msgstr ""
 
+msgid "Main menu"
+msgstr ""
+
+msgid "Help"
+msgstr ""
+
+msgid "About"
+msgstr ""
+
+msgid "A Vietnamese input method for GNOME."
+msgstr ""
+
+msgid "Coded by"
+msgstr ""
+
+msgid "Based on ibus-bamboo by"
+msgstr ""
+
+msgid "Dictionary by"
+msgstr ""
+
 msgid "Output"
 msgstr ""
 
 msgid "Character set"
+msgstr ""
+
+msgid "Composed Unicode"
 msgstr ""
 
 msgid "Input"

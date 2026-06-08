@@ -18,11 +18,35 @@ msgstr "Tùy chỉnh"
 msgid "Bambusa Preferences"
 msgstr "Tùy chỉnh Bambusa"
 
+msgid "Main menu"
+msgstr "Menu chính"
+
+msgid "Help"
+msgstr "Trợ giúp"
+
+msgid "About"
+msgstr "Giới thiệu"
+
+msgid "A Vietnamese input method for GNOME."
+msgstr "Bộ gõ tiếng Việt cho GNOME."
+
+msgid "Coded by"
+msgstr "Lập trình bởi"
+
+msgid "Based on ibus-bamboo by"
+msgstr "Dựa trên ibus-bamboo của"
+
+msgid "Dictionary by"
+msgstr "Từ điển bởi"
+
 msgid "Output"
 msgstr "Đầu ra"
 
 msgid "Character set"
 msgstr "Bộ ký tự"
+
+msgid "Composed Unicode"
+msgstr "Unicode tổ hợp"
 
 msgid "Input"
 msgstr "Đầu vào"

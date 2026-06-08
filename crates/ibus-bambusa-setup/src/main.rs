@@ -65,12 +65,15 @@ fn build_ui(app: &adw::Application) {
     let settings = Settings::new(SCHEMA_ID);
     let page = adw::PreferencesPage::new();
 
-    // Output charset.
+    // Output charset. The internal names are the encoder keys / stored values;
+    // the list shows translatable display labels for them.
     let output = group("Output");
     let charsets = charset_names();
+    let labels: Vec<String> = charsets.iter().map(|c| charset_label(c)).collect();
+    let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let charset_row = adw::ComboRow::builder()
         .title(gettext("Character set"))
-        .model(&StringList::new(&charsets))
+        .model(&StringList::new(&label_refs))
         .build();
     let current: String = settings.string(keys::OUTPUT_CHARSET).into();
     if let Some(idx) = charsets.iter().position(|c| *c == current.as_str()) {
@@ -177,18 +180,87 @@ fn build_ui(app: &adw::Application) {
     // Macros.
     page.add(&build_macros_group(&settings));
 
+    let header = adw::HeaderBar::new();
     let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.add_top_bar(&header);
     toolbar.set_content(Some(&page));
 
-    adw::ApplicationWindow::builder()
+    let window = adw::ApplicationWindow::builder()
         .application(app)
         .title(gettext("Bambusa Preferences"))
         .default_width(460)
         .default_height(640)
         .content(&toolbar)
-        .build()
-        .present();
+        .build();
+
+    // Primary menu (hamburger) next to the window controls.
+    let menu = gtk::gio::Menu::new();
+    menu.append(Some(&gettext("Help")), Some("win.help"));
+    menu.append(Some(&gettext("About")), Some("win.about"));
+    let menu_button = gtk::MenuButton::builder()
+        .icon_name("open-menu-symbolic")
+        .tooltip_text(gettext("Main menu"))
+        .menu_model(&menu)
+        .build();
+    header.pack_end(&menu_button);
+
+    let about = gtk::gio::SimpleAction::new("about", None);
+    about.connect_activate({
+        let window = window.clone();
+        move |_, _| show_about(&window)
+    });
+    window.add_action(&about);
+
+    let help = gtk::gio::SimpleAction::new("help", None);
+    help.connect_activate({
+        let window = window.clone();
+        move |_, _| {
+            gtk::UriLauncher::new("https://github.com/runlevel5/ibus-bambusa").launch(
+                Some(&window),
+                gtk::gio::Cancellable::NONE,
+                |_| {},
+            );
+        }
+    });
+    window.add_action(&help);
+
+    window.present();
+}
+
+/// Show the standard libadwaita About window.
+fn show_about(parent: &impl IsA<gtk::Window>) {
+    let about = adw::AboutWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .application_name("Bambusa")
+        .application_icon("input-keyboard")
+        .version(env!("CARGO_PKG_VERSION"))
+        // The main-page subtitle: use the description rather than a name.
+        .developer_name(gettext("A Vietnamese input method for GNOME."))
+        .copyright("© 2025–2026 Trung Lê")
+        .license_type(gtk::License::Gpl30)
+        .comments(gettext("A Vietnamese input method for GNOME."))
+        .website("https://github.com/runlevel5/ibus-bambusa")
+        .issue_url("https://github.com/runlevel5/ibus-bambusa/issues")
+        .build();
+
+    // Credits page (shown above Legal).
+    about.add_credit_section(Some(&gettext("Coded by")), &["Lê Đức Trung"]);
+    about.add_credit_section(
+        Some(&gettext("Based on ibus-bamboo by")),
+        &["Lương Thanh Lâm"],
+    );
+    about.add_credit_section(
+        Some(&gettext("Dictionary by")),
+        &[
+            "Hồ Ngọc Đức",
+            "Ngô Quốc Hưng",
+            "Free Vietnamese Dictionary Project",
+            "Vietnamese Wiktionary",
+        ],
+    );
+
+    about.present();
 }
 
 /// The "Macros" group: the two toggles plus an "edit" button that opens the
@@ -436,6 +508,16 @@ fn write_macros(settings: &Settings, pairs: &[(String, String)]) {
     let entries: Vec<String> = pairs.iter().map(|(k, v)| format!("{k}:{v}")).collect();
     let refs: Vec<&str> = entries.iter().map(String::as_str).collect();
     let _ = settings.set_strv(keys::MACROS, refs.as_slice());
+}
+
+/// The display label for a charset internal name (most are shown verbatim; the
+/// Vietnamese-named ones get a translatable label).
+fn charset_label(name: &str) -> String {
+    if name == "Unicode tổ hợp" {
+        gettext("Composed Unicode")
+    } else {
+        name.to_string()
+    }
 }
 
 fn group(title: &str) -> adw::PreferencesGroup {
