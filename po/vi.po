@@ -27,6 +27,36 @@ msgstr "Trợ giúp"
 msgid "About"
 msgstr "Giới thiệu"
 
+msgid "How to type"
+msgstr "Cách gõ"
+
+msgid "Acute tone"
+msgstr "Dấu sắc"
+
+msgid "Grave tone"
+msgstr "Dấu huyền"
+
+msgid "Hook above tone"
+msgstr "Dấu hỏi"
+
+msgid "Tilde tone"
+msgstr "Dấu ngã"
+
+msgid "Dot below tone"
+msgstr "Dấu nặng"
+
+msgid "Remove tone"
+msgstr "Xoá dấu"
+
+msgid "Circumflex (â ê ô)"
+msgstr "Dấu mũ (â ê ô)"
+
+msgid "Horn (ơ ư)"
+msgstr "Dấu móc (ơ ư)"
+
+msgid "Breve (ă)"
+msgstr "Dấu trăng (ă)"
+
 msgid "A Vietnamese input method for GNOME."
 msgstr "Bộ gõ tiếng Việt cho GNOME."
 

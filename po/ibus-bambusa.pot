@@ -28,6 +28,36 @@ msgstr ""
 msgid "About"
 msgstr ""
 
+msgid "How to type"
+msgstr ""
+
+msgid "Acute tone"
+msgstr ""
+
+msgid "Grave tone"
+msgstr ""
+
+msgid "Hook above tone"
+msgstr ""
+
+msgid "Tilde tone"
+msgstr ""
+
+msgid "Dot below tone"
+msgstr ""
+
+msgid "Remove tone"
+msgstr ""
+
+msgid "Circumflex (â ê ô)"
+msgstr ""
+
+msgid "Horn (ơ ư)"
+msgstr ""
+
+msgid "Breve (ă)"
+msgstr ""
+
 msgid "A Vietnamese input method for GNOME."
 msgstr ""
 

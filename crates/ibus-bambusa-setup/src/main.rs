@@ -62,6 +62,7 @@ fn main() {
 }
 
 fn build_ui(app: &adw::Application) {
+    install_keycap_css();
     let settings = Settings::new(SCHEMA_ID);
     let page = adw::PreferencesPage::new();
 
@@ -214,13 +215,7 @@ fn build_ui(app: &adw::Application) {
     let help = gtk::gio::SimpleAction::new("help", None);
     help.connect_activate({
         let window = window.clone();
-        move |_, _| {
-            gtk::UriLauncher::new("https://github.com/runlevel5/ibus-bambusa").launch(
-                Some(&window),
-                gtk::gio::Cancellable::NONE,
-                |_| {},
-            );
-        }
+        move |_, _| open_help(&window)
     });
     window.add_action(&help);
 
@@ -261,6 +256,126 @@ fn show_about(parent: &impl IsA<gtk::Window>) {
     );
 
     about.present();
+}
+
+/// Per-method typing reference: `(method, [(effect, space-separated keys)])`.
+/// Effects are translatable (the Vietnamese tone names are the `vi` strings);
+/// letters and method names are shown verbatim.
+const HELP: &[(&str, &[(&str, &str)])] = &[
+    (
+        "Telex",
+        &[
+            ("Acute tone", "S"),
+            ("Grave tone", "F"),
+            ("Hook above tone", "R"),
+            ("Tilde tone", "X"),
+            ("Dot below tone", "J"),
+            ("Remove tone", "Z"),
+            ("â", "A A"),
+            ("ê", "E E"),
+            ("ô", "O O"),
+            ("ă", "A W"),
+            ("ơ", "O W"),
+            ("ư", "U W"),
+            ("đ", "D D"),
+        ],
+    ),
+    (
+        "VNI",
+        &[
+            ("Acute tone", "1"),
+            ("Grave tone", "2"),
+            ("Hook above tone", "3"),
+            ("Tilde tone", "4"),
+            ("Dot below tone", "5"),
+            ("Circumflex (â ê ô)", "6"),
+            ("Horn (ơ ư)", "7"),
+            ("Breve (ă)", "8"),
+            ("đ", "9"),
+            ("Remove tone", "0"),
+        ],
+    ),
+    (
+        "VIQR",
+        &[
+            ("Acute tone", "'"),
+            ("Grave tone", "`"),
+            ("Hook above tone", "?"),
+            ("Tilde tone", "~"),
+            ("Dot below tone", "."),
+            ("Circumflex (â ê ô)", "^"),
+            ("Horn (ơ ư)", "+"),
+            ("Breve (ă)", "("),
+            ("đ", "D D"),
+            ("Remove tone", "-"),
+        ],
+    ),
+];
+
+/// Show a Help window: one section per input method, each row pairing the effect
+/// with the keystrokes (rendered as keycaps).
+fn open_help(parent: &impl IsA<gtk::Window>) {
+    let window = adw::Window::builder()
+        .title(gettext("How to type"))
+        .modal(true)
+        .transient_for(parent)
+        .default_width(440)
+        .default_height(600)
+        .build();
+
+    let page = adw::PreferencesPage::new();
+    for (method, rows) in HELP {
+        let group = adw::PreferencesGroup::builder().title(*method).build();
+        for (effect, keys) in *rows {
+            let row = adw::ActionRow::builder().title(gettext(*effect)).build();
+            row.add_suffix(&keycaps(keys));
+            group.add(&row);
+        }
+        page.add(&group);
+    }
+
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.set_content(Some(&page));
+    window.set_content(Some(&toolbar));
+    window.present();
+}
+
+/// A row of keycap labels for a space-separated key string (e.g. `"A A"`).
+fn keycaps(keys: &str) -> gtk::Box {
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(4)
+        .valign(gtk::Align::Center)
+        .build();
+    for key in keys.split(' ') {
+        let label = gtk::Label::builder()
+            .label(key)
+            .css_classes(["bambusa-key", "monospace"])
+            .build();
+        row.append(&label);
+    }
+    row
+}
+
+/// Install the keycap style once, on the default display.
+fn install_keycap_css() {
+    let provider = gtk::CssProvider::new();
+    provider.load_from_data(
+        ".bambusa-key { \
+         border: 1px solid alpha(currentColor, 0.25); \
+         border-radius: 6px; \
+         padding: 1px 7px; \
+         min-width: 12px; \
+         }",
+    );
+    if let Some(display) = gtk::gdk::Display::default() {
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
 }
 
 /// The "Macros" group: the two toggles plus an "edit" button that opens the
