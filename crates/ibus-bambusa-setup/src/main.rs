@@ -319,11 +319,39 @@ fn open_help(parent: &impl IsA<gtk::Window>) {
         .title(gettext("How to type"))
         .modal(true)
         .transient_for(parent)
-        .default_width(440)
-        .default_height(600)
+        .default_width(460)
+        .default_height(620)
         .build();
 
-    let page = adw::PreferencesPage::new();
+    // The scrollable list of sections.
+    let list = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(18)
+        .margin_top(6)
+        .margin_bottom(18)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    let clamp = adw::Clamp::builder().child(&list).build();
+    let scrolled = gtk::ScrolledWindow::builder()
+        .vexpand(true)
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .child(&clamp)
+        .build();
+
+    // Tag pills that jump to each section.
+    let pills = gtk::FlowBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .halign(gtk::Align::Center)
+        .homogeneous(false)
+        .row_spacing(6)
+        .column_spacing(6)
+        .margin_top(6)
+        .margin_bottom(6)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+
     for (method, rows) in HELP {
         let group = adw::PreferencesGroup::builder().title(*method).build();
         for (effect, keys) in *rows {
@@ -331,12 +359,32 @@ fn open_help(parent: &impl IsA<gtk::Window>) {
             row.add_suffix(&keycaps(keys));
             group.add(&row);
         }
-        page.add(&group);
+        list.append(&group);
+
+        let pill = gtk::Button::builder()
+            .label(*method)
+            .css_classes(["pill"])
+            .build();
+        pill.connect_clicked({
+            let clamp = clamp.clone();
+            let scrolled = scrolled.clone();
+            let group = group.clone();
+            move |_| {
+                if let Some((_, y)) = group.translate_coordinates(&clamp, 0.0, 0.0) {
+                    scrolled.vadjustment().set_value(y);
+                }
+            }
+        });
+        pills.insert(&pill, -1);
     }
+
+    let outer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    outer.append(&pills);
+    outer.append(&scrolled);
 
     let toolbar = adw::ToolbarView::new();
     toolbar.add_top_bar(&adw::HeaderBar::new());
-    toolbar.set_content(Some(&page));
+    toolbar.set_content(Some(&outer));
     window.set_content(Some(&toolbar));
     window.present();
 }
