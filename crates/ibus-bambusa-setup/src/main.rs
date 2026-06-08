@@ -265,49 +265,49 @@ const HELP: &[(&str, &[(&str, &str)])] = &[
     (
         "Telex",
         &[
-            ("Acute tone", "S"),
-            ("Grave tone", "F"),
-            ("Hook above tone", "R"),
-            ("Tilde tone", "X"),
-            ("Dot below tone", "J"),
-            ("Remove tone", "Z"),
-            ("â", "A A"),
-            ("ê", "E E"),
-            ("ô", "O O"),
-            ("ă", "A W"),
-            ("ơ", "O W"),
-            ("ư", "U W"),
-            ("đ", "D D"),
+            ("Acute tone (e.g. á)", "Vowel + S"),
+            ("Grave tone (e.g. à)", "Vowel + F"),
+            ("Hook above tone (e.g. ả)", "Vowel + R"),
+            ("Tilde tone (e.g. ã)", "Vowel + X"),
+            ("Dot below tone (e.g. ạ)", "Vowel + J"),
+            ("Remove tone", "Vowel + Z"),
+            ("â", "A + A"),
+            ("ê", "E + E"),
+            ("ô", "O + O"),
+            ("ă", "A + W"),
+            ("ơ", "O + W"),
+            ("ư", "U + W"),
+            ("đ", "D + D"),
         ],
     ),
     (
         "VNI",
         &[
-            ("Acute tone", "1"),
-            ("Grave tone", "2"),
-            ("Hook above tone", "3"),
-            ("Tilde tone", "4"),
-            ("Dot below tone", "5"),
-            ("Circumflex (â ê ô)", "6"),
-            ("Horn (ơ ư)", "7"),
-            ("Breve (ă)", "8"),
-            ("đ", "9"),
-            ("Remove tone", "0"),
+            ("Acute tone (e.g. á)", "Vowel + 1"),
+            ("Grave tone (e.g. à)", "Vowel + 2"),
+            ("Hook above tone (e.g. ả)", "Vowel + 3"),
+            ("Tilde tone (e.g. ã)", "Vowel + 4"),
+            ("Dot below tone (e.g. ạ)", "Vowel + 5"),
+            ("Circumflex (e.g. â ê ô)", "Vowel + 6"),
+            ("Horn (e.g. ơ ư)", "Vowel + 7"),
+            ("Breve (e.g. ă)", "Vowel + 8"),
+            ("đ", "D + 9"),
+            ("Remove tone", "Vowel + 0"),
         ],
     ),
     (
         "VIQR",
         &[
-            ("Acute tone", "'"),
-            ("Grave tone", "`"),
-            ("Hook above tone", "?"),
-            ("Tilde tone", "~"),
-            ("Dot below tone", "."),
-            ("Circumflex (â ê ô)", "^"),
-            ("Horn (ơ ư)", "+"),
-            ("Breve (ă)", "("),
-            ("đ", "D D"),
-            ("Remove tone", "-"),
+            ("Acute tone (e.g. á)", "Vowel + '"),
+            ("Grave tone (e.g. à)", "Vowel + `"),
+            ("Hook above tone (e.g. ả)", "Vowel + ?"),
+            ("Tilde tone (e.g. ã)", "Vowel + ~"),
+            ("Dot below tone (e.g. ạ)", "Vowel + ."),
+            ("Circumflex (e.g. â ê ô)", "Vowel + ^"),
+            ("Horn (e.g. ơ ư)", "Vowel + +"),
+            ("Breve (e.g. ă)", "Vowel + ("),
+            ("đ", "D + D"),
+            ("Remove tone", "Vowel + -"),
         ],
     ),
 ];
@@ -341,16 +341,27 @@ fn open_help(parent: &impl IsA<gtk::Window>) {
     window.present();
 }
 
-/// A row of keycap labels for a space-separated key string (e.g. `"A A"`).
+/// A row of keycaps for a `" + "`-separated key string (e.g. `"Vowel + S"`),
+/// with a dimmed `+` between them. The `Vowel` placeholder is translatable.
 fn keycaps(keys: &str) -> gtk::Box {
     let row = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(4)
         .valign(gtk::Align::Center)
         .build();
-    for key in keys.split(' ') {
+    for (i, token) in keys.split(" + ").enumerate() {
+        if i > 0 {
+            let plus = gtk::Label::new(Some("+"));
+            plus.add_css_class("dim-label");
+            row.append(&plus);
+        }
+        let text = if token == "Vowel" {
+            gettext("Vowel")
+        } else {
+            token.to_string()
+        };
         let label = gtk::Label::builder()
-            .label(key)
+            .label(text)
             .css_classes(["bambusa-key", "monospace"])
             .build();
         row.append(&label);

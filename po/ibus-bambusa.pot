@@ -31,31 +31,34 @@ msgstr ""
 msgid "How to type"
 msgstr ""
 
-msgid "Acute tone"
+msgid "Vowel"
 msgstr ""
 
-msgid "Grave tone"
+msgid "Acute tone (e.g. á)"
 msgstr ""
 
-msgid "Hook above tone"
+msgid "Grave tone (e.g. à)"
 msgstr ""
 
-msgid "Tilde tone"
+msgid "Hook above tone (e.g. ả)"
 msgstr ""
 
-msgid "Dot below tone"
+msgid "Tilde tone (e.g. ã)"
+msgstr ""
+
+msgid "Dot below tone (e.g. ạ)"
 msgstr ""
 
 msgid "Remove tone"
 msgstr ""
 
-msgid "Circumflex (â ê ô)"
+msgid "Circumflex (e.g. â ê ô)"
 msgstr ""
 
-msgid "Horn (ơ ư)"
+msgid "Horn (e.g. ơ ư)"
 msgstr ""
 
-msgid "Breve (ă)"
+msgid "Breve (e.g. ă)"
 msgstr ""
 
 msgid "A Vietnamese input method for GNOME."
