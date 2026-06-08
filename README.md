@@ -18,8 +18,7 @@ Wayland supports well, and nothing else:
   (TCVN3, VNI-Win, VIQR, VISCII, VPS, BK HCM, Vietware, NCR, …).
 - **Native GUI.** Configuration lives in GSettings/dconf exposed via native GNOME GUI
 
-If you need the full feature set (X11, every charset, the emoji picker, a
-settings GUI), use the original [ibus-bamboo](https://github.com/BambooEngine/ibus-bamboo).
+If you need the full feature set (X11, every charset, the emoji picker), use the original [ibus-bamboo](https://github.com/BambooEngine/ibus-bamboo).
 
 ## Credits
 

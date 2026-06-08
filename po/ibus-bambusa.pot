@@ -133,6 +133,24 @@ msgstr ""
 msgid "Export macros"
 msgstr ""
 
+msgid "Import failed"
+msgstr ""
+
+msgid "Could not read the file."
+msgstr ""
+
+msgid "This file is not a valid macro list — each line must be in the “shortcut:expansion” format."
+msgstr ""
+
+msgid "Line"
+msgstr ""
+
+msgid "The file does not contain any macros."
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
 msgid "Remove"
 msgstr ""
 

@@ -132,6 +132,24 @@ msgstr "Nhập macro"
 msgid "Export macros"
 msgstr "Xuất macro"
 
+msgid "Import failed"
+msgstr "Nhập thất bại"
+
+msgid "Could not read the file."
+msgstr "Không thể đọc tệp."
+
+msgid "This file is not a valid macro list — each line must be in the “shortcut:expansion” format."
+msgstr "Tệp này không phải là danh sách macro hợp lệ — mỗi dòng phải có dạng “chữ tắt:nội dung”."
+
+msgid "Line"
+msgstr "Dòng"
+
+msgid "The file does not contain any macros."
+msgstr "Tệp không chứa macro nào."
+
+msgid "OK"
+msgstr "OK"
+
 msgid "Remove"
 msgstr "Xoá"
 

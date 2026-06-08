@@ -379,20 +379,25 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
                 .title(gettext("Import macros"))
                 .build();
             let add_row = add_row.clone();
+            let cb_window = window.clone();
             dialog.open(Some(&window), gtk::gio::Cancellable::NONE, move |res| {
-                if let Ok(file) = res
-                    && let Some(path) = file.path()
-                    && let Ok(content) = std::fs::read_to_string(path)
-                {
-                    for line in content.lines() {
-                        let s = line.trim();
-                        if s.is_empty() || s.starts_with('#') || s.starts_with(';') {
-                            continue;
-                        }
-                        if let Some((k, v)) = s.split_once(':') {
-                            add_row(k.trim(), v.trim());
+                // res is Err when the user cancels the picker — nothing to do.
+                let Ok(file) = res else { return };
+                let Some(path) = file.path() else { return };
+                let content = match std::fs::read_to_string(&path) {
+                    Ok(content) => content,
+                    Err(_) => {
+                        show_import_error(&cb_window, &gettext("Could not read the file."));
+                        return;
+                    }
+                };
+                match parse_macro_file(&content) {
+                    Ok(pairs) => {
+                        for (key, value) in pairs {
+                            add_row(&key, &value);
                         }
                     }
+                    Err(message) => show_import_error(&cb_window, &message),
                 }
             });
         }
@@ -510,6 +515,47 @@ fn write_macros(settings: &Settings, pairs: &[(String, String)]) {
     let _ = settings.set_strv(keys::MACROS, refs.as_slice());
 }
 
+/// Validate and parse a macro file into `(shortcut, expansion)` pairs. Blank
+/// lines and `#`/`;` comments are ignored; every other line must be a
+/// `shortcut:expansion` pair with both parts non-empty. Returns a
+/// human-readable error for the first malformed line, or if no macros are found.
+fn parse_macro_file(content: &str) -> Result<Vec<(String, String)>, String> {
+    let mut pairs = Vec::new();
+    for (index, line) in content.lines().enumerate() {
+        let s = line.trim();
+        if s.is_empty() || s.starts_with('#') || s.starts_with(';') {
+            continue;
+        }
+        match s.split_once(':') {
+            Some((key, value)) if !key.trim().is_empty() && !value.trim().is_empty() => {
+                pairs.push((key.trim().to_string(), value.trim().to_string()));
+            }
+            _ => {
+                return Err(format!(
+                    "{}\n\n{} {}: {s}",
+                    gettext(
+                        "This file is not a valid macro list — each line must be in the “shortcut:expansion” format."
+                    ),
+                    gettext("Line"),
+                    index + 1,
+                ));
+            }
+        }
+    }
+    if pairs.is_empty() {
+        return Err(gettext("The file does not contain any macros."));
+    }
+    Ok(pairs)
+}
+
+/// Show a modal error dialog for a failed macro import.
+fn show_import_error(parent: &impl IsA<gtk::Window>, message: &str) {
+    let heading = gettext("Import failed");
+    let dialog = adw::MessageDialog::new(Some(parent), Some(heading.as_str()), Some(message));
+    dialog.add_response("ok", &gettext("OK"));
+    dialog.present();
+}
+
 /// The display label for a charset internal name (most are shown verbatim; the
 /// Vietnamese-named ones get a translatable label).
 fn charset_label(name: &str) -> String {
@@ -540,4 +586,38 @@ fn add_switch(
     }
     settings.bind(key, &row, "active").build();
     group.add(&row);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_macro_file;
+
+    #[test]
+    fn parses_a_valid_file() {
+        let content = "# a comment\n; another\n\nvn:Việt Nam\nbtw:  by the way \n";
+        let pairs = parse_macro_file(content).unwrap();
+        assert_eq!(
+            pairs,
+            vec![
+                ("vn".to_string(), "Việt Nam".to_string()),
+                ("btw".to_string(), "by the way".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn rejects_a_line_without_a_colon() {
+        assert!(parse_macro_file("vn:ok\nnot a macro line\n").is_err());
+    }
+
+    #[test]
+    fn rejects_empty_shortcut_or_expansion() {
+        assert!(parse_macro_file(":value").is_err());
+        assert!(parse_macro_file("key:").is_err());
+    }
+
+    #[test]
+    fn rejects_a_file_with_no_macros() {
+        assert!(parse_macro_file("# only comments\n\n").is_err());
+    }
 }
