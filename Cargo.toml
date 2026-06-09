@@ -11,7 +11,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.96"
 license = "GPL-3.0-or-later"
 authors = ["Trung Lê <8@tle.id.au>"]
 repository = "https://github.com/runlevel5/ibus-bambusa"
