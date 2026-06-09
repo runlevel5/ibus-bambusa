@@ -1,0 +1,29 @@
+Source: ibus-bambusa
+Section: utils
+Priority: optional
+Maintainer: Trung Lê <8@tle.id.au>
+Build-Depends:
+ debhelper-compat (= 13),
+ meson (>= 0.61),
+ cargo,
+ rustc,
+ gettext,
+ pkg-config,
+ libgtk-4-dev,
+ libadwaita-1-dev,
+ libglib2.0-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/runlevel5/ibus-bambusa
+Rules-Requires-Root: no
+
+Package: ibus-bambusa
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ ibus
+Description: Vietnamese input method engine for GNOME (Wayland)
+ ibus-bambusa is a Vietnamese input method engine for IBus, targeting GNOME on
+ Wayland. It supports the Telex, VNI and VIQR typing methods, every common
+ output charset, spelling validation, text macros and a libadwaita preferences
+ GUI.

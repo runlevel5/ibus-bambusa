@@ -1,2 +1,4 @@
 /target
 /builddir
+/build/rpm/rpmbuild/
+/build/deb/out/
