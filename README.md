@@ -33,6 +33,12 @@ The Vietnamese composition logic is a direct port of the excellent
 The port aims to match their behaviour closely; the upstream test corpus is
 re-run against this implementation.
 
+## Screenshots
+
+![](./screenshot1.png)
+![](./screenshot2.png)
+![](./screenshot3.png)
+
 ## Layout
 
 This is a Cargo workspace:
