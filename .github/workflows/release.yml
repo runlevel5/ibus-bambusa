@@ -1,0 +1,305 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # First, run tests to ensure the code is valid
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        run: cargo test --verbose
+
+  # Check if version changed to determine if we should release
+  check-version:
+    name: Check Version
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: check
+        run: |
+          # Get current version from Cargo.toml
+          CURRENT_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Check if tag already exists
+          if git ls-remote --tags origin | grep -q "refs/tags/v$CURRENT_VERSION"; then
+            echo "Tag v$CURRENT_VERSION already exists, skipping release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag v$CURRENT_VERSION does not exist, will create release"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+  # Build release binaries for multiple platforms
+  build:
+    name: Build - ${{ matrix.target }}
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.xz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.xz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+          - target: powerpc64le-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: powerpc64le-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            archive: tar.xz
+            use_cross: true
+          - target: riscv64gc-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: s390x-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+          - target: loongarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.xz
+            use_cross: true
+          - target: loongarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.xz
+            use_cross: true
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl-tools (Linux musl)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install cross-compilation tools (Linux ARM)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Configure cross-compilation (Linux ARM)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross-compilation tools (Linux ARM musl)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: |
+          TOOLCHAIN_NAME="aarch64--musl--stable-2025.08-1"
+          TOOLCHAIN_URL="https://toolchains.bootlin.com/downloads/releases/toolchains/aarch64/tarballs/${TOOLCHAIN_NAME}.tar.xz"
+          CHECKSUM_URL="https://toolchains.bootlin.com/downloads/releases/toolchains/aarch64/tarballs/${TOOLCHAIN_NAME}.sha256"
+          curl -sSL --max-time 300 -o "${TOOLCHAIN_NAME}.tar.xz" "$TOOLCHAIN_URL"
+          curl -sSL --max-time 30 -o "${TOOLCHAIN_NAME}.sha256" "$CHECKSUM_URL"
+          sha256sum -c "${TOOLCHAIN_NAME}.sha256"
+          tar xf "${TOOLCHAIN_NAME}.tar.xz"
+          rm -f "${TOOLCHAIN_NAME}.tar.xz" "${TOOLCHAIN_NAME}.sha256"
+          echo "$PWD/${TOOLCHAIN_NAME}/bin" >> $GITHUB_PATH
+
+      - name: Configure cross-compilation (Linux ARM musl)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: |
+          echo '[target.aarch64-unknown-linux-musl]' >> ~/.cargo/config.toml
+          echo 'linker = "aarch64-buildroot-linux-musl-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross-compilation tools (Linux ppc64le)
+        if: matrix.target == 'powerpc64le-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-powerpc64le-linux-gnu
+
+      - name: Configure cross-compilation (Linux ppc64le)
+        if: matrix.target == 'powerpc64le-unknown-linux-gnu'
+        run: |
+          echo '[target.powerpc64le-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "powerpc64le-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross-compilation tools (Linux ppc64le musl)
+        if: matrix.target == 'powerpc64le-unknown-linux-musl'
+        run: |
+          TOOLCHAIN_NAME="powerpc64le-power8--musl--stable-2025.08-1"
+          TOOLCHAIN_URL="https://toolchains.bootlin.com/downloads/releases/toolchains/powerpc64le-power8/tarballs/${TOOLCHAIN_NAME}.tar.xz"
+          CHECKSUM_URL="https://toolchains.bootlin.com/downloads/releases/toolchains/powerpc64le-power8/tarballs/${TOOLCHAIN_NAME}.sha256"
+          curl -sSL --max-time 300 -o "${TOOLCHAIN_NAME}.tar.xz" "$TOOLCHAIN_URL"
+          curl -sSL --max-time 30 -o "${TOOLCHAIN_NAME}.sha256" "$CHECKSUM_URL"
+          sha256sum -c "${TOOLCHAIN_NAME}.sha256"
+          tar xf "${TOOLCHAIN_NAME}.tar.xz"
+          rm -f "${TOOLCHAIN_NAME}.tar.xz" "${TOOLCHAIN_NAME}.sha256"
+          echo "$PWD/${TOOLCHAIN_NAME}/bin" >> $GITHUB_PATH
+
+      - name: Configure cross-compilation (Linux ppc64le musl)
+        if: matrix.target == 'powerpc64le-unknown-linux-musl'
+        run: |
+          echo '[target.powerpc64le-unknown-linux-musl]' >> ~/.cargo/config.toml
+          echo 'linker = "powerpc64le-buildroot-linux-musl-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross-compilation tools (Linux riscv64)
+        if: matrix.target == 'riscv64gc-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu
+
+      - name: Configure cross-compilation (Linux riscv64)
+        if: matrix.target == 'riscv64gc-unknown-linux-gnu'
+        run: |
+          echo '[target.riscv64gc-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "riscv64-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross-compilation tools (Linux s390x)
+        if: matrix.target == 's390x-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-s390x-linux-gnu
+
+      - name: Configure cross-compilation (Linux s390x)
+        if: matrix.target == 's390x-unknown-linux-gnu'
+        run: |
+          echo '[target.s390x-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "s390x-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+      - name: Install cross (FreeBSD)
+        if: matrix.use_cross == true
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Cache cargo registry
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build release binary
+        if: matrix.use_cross != true
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build release binary (cross)
+        if: matrix.use_cross == true
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Prepare archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar cJvf ../../../ejson-${{ needs.check-version.outputs.version }}-${{ matrix.target }}.tar.xz ejson
+
+      - name: Prepare archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Compress-Archive -Path ejson.exe -DestinationPath ../../../ejson-${{ needs.check-version.outputs.version }}-${{ matrix.target }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ejson-${{ matrix.target }}
+          path: ejson-${{ needs.check-version.outputs.version }}-${{ matrix.target }}.${{ matrix.archive }}
+
+  # Create GitHub release with all artifacts
+  release:
+    name: Create Release
+    needs: [check-version, build]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: v${{ needs.check-version.outputs.version }}
+          generate_release_notes: true
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish to crates.io
+  publish-crates:
+    name: Publish to crates.io
+    needs: [check-version, release]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Publish to crates.io
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
