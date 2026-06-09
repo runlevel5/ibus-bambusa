@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Bambusa Preferences
+Comment=Configure the Bambusa Vietnamese input method
+Exec=@libexecdir@/ibus-bambusa/ibus-setup-bambusa
+Icon=input-keyboard
+Terminal=false
+NoDisplay=true
+Categories=Settings;

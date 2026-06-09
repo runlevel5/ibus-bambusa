@@ -34,6 +34,16 @@ configure_file(
     install_dir: datadir / 'applications',
 )
 
+# Desktop entry whose name matches the setup GApplication id, so the preferences
+# window picks up a proper icon (instead of the generic fallback).
+configure_file(
+    input: 'org.freedesktop.IBus.bambusa.setup.desktop.in',
+    output: 'org.freedesktop.IBus.bambusa.setup.desktop',
+    configuration: conf,
+    install: true,
+    install_dir: datadir / 'applications',
+)
+
 # GSettings schema: install it and (re)compile the schema cache.
 gnome = import('gnome')
 install_data(

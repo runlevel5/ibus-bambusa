@@ -52,6 +52,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/ibus-setup-bambusa.de
 %{_datadir}/ibus-bambusa/vietnamese.cm.dict
 %{_datadir}/ibus-bambusa/LICENSE.vietnamese.cm.dict
 %{_datadir}/applications/ibus-setup-bambusa.desktop
+%{_datadir}/applications/org.freedesktop.IBus.bambusa.setup.desktop
 %{_datadir}/glib-2.0/schemas/org.freedesktop.IBus.bambusa.gschema.xml
 
 %changelog
