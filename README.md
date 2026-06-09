@@ -45,7 +45,7 @@ This is a Cargo workspace:
 
 ## Building
 
-Requires Rust 1.95.0 (pinned via `rust-toolchain.toml`) and IBus. Installing
+Requires Rust 1.96.0 (pinned via `rust-toolchain.toml`) and IBus. Installing
 additionally needs Meson and Ninja.
 
 ### Develop
