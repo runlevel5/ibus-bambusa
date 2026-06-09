@@ -244,7 +244,7 @@ fn show_about(parent: &impl IsA<gtk::Window>) {
     about.add_credit_section(Some(&gettext("Coded by")), &["Lê Đức Trung"]);
     about.add_credit_section(
         Some(&gettext("Based on ibus-bamboo by")),
-        &["Lương Thanh Lâm"],
+        &["Lương Thanh Lâm <ltlam93@gmail.com>"],
     );
     about.add_credit_section(
         Some(&gettext("Dictionary by")),
