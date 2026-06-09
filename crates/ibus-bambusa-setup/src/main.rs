@@ -20,8 +20,8 @@ use gtk::glib::ExitCode;
 use gtk::{StringList, glib};
 use libadwaita as adw;
 
-/// Editable macro rows in the editor: `(container, shortcut, expansion)`.
-type MacroRows = Rc<RefCell<Vec<(gtk::Box, gtk::Entry, gtk::Entry)>>>;
+/// Editable macro rows in the editor: `(row, shortcut, expansion)`.
+type MacroRows = Rc<RefCell<Vec<(gtk::ListBoxRow, gtk::Entry, gtk::Entry)>>>;
 /// Shared callback that appends a `(shortcut, expansion)` row to the editor.
 type AddRow = Rc<dyn Fn(&str, &str)>;
 
@@ -516,69 +516,174 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
         window.set_transient_for(Some(parent));
     }
 
-    let list = gtk::Box::new(gtk::Orientation::Vertical, 6);
-    // Tracked rows: (container, shortcut entry, expansion entry).
+    // Editable rows in a boxed list (a card with separators).
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::Single)
+        .css_classes(["boxed-list"])
+        .build();
     let rows: MacroRows = Rc::new(RefCell::new(Vec::new()));
+    // Keeps exactly one empty row at the end to type a new macro into.
+    let ensure_trailing: Rc<RefCell<Box<dyn Fn()>>> = Rc::new(RefCell::new(Box::new(|| {})));
+    // Disables the remove button when only the trailing empty row remains.
+    let update_remove: Rc<RefCell<Box<dyn Fn()>>> = Rc::new(RefCell::new(Box::new(|| {})));
 
     let add_row: AddRow = {
         let list = list.clone();
         let rows = rows.clone();
+        let ensure_trailing = ensure_trailing.clone();
+        let update_remove = update_remove.clone();
         Rc::new(move |key: &str, value: &str| {
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            let row_box = gtk::Box::builder()
+                .orientation(gtk::Orientation::Horizontal)
+                .spacing(12)
+                .margin_top(6)
+                .margin_bottom(6)
+                .margin_start(12)
+                .margin_end(12)
+                .build();
             let key_entry = gtk::Entry::builder()
                 .text(key)
                 .placeholder_text(gettext("Shortcut"))
+                .has_frame(false)
                 .hexpand(true)
                 .build();
+            let arrow = gtk::Image::from_icon_name("go-next-symbolic");
+            arrow.add_css_class("dim-label");
             let value_entry = gtk::Entry::builder()
                 .text(value)
                 .placeholder_text(gettext("Expansion"))
+                .has_frame(false)
                 .hexpand(true)
                 .build();
-            let del = gtk::Button::builder()
-                .icon_name("user-trash-symbolic")
-                .tooltip_text(gettext("Remove"))
-                .valign(gtk::Align::Center)
-                .css_classes(["flat"])
-                .build();
-            row.append(&key_entry);
-            row.append(&value_entry);
-            row.append(&del);
-            del.connect_clicked({
+            row_box.append(&key_entry);
+            row_box.append(&arrow);
+            row_box.append(&value_entry);
+
+            let row = gtk::ListBoxRow::new();
+            row.set_child(Some(&row_box));
+            for entry in [&key_entry, &value_entry] {
+                // Typing into the last row spawns a fresh trailing empty row.
+                entry.connect_changed({
+                    let ensure_trailing = ensure_trailing.clone();
+                    let update_remove = update_remove.clone();
+                    move |_| {
+                        (ensure_trailing.borrow())();
+                        (update_remove.borrow())();
+                    }
+                });
+                // Focusing a cell selects its row, so the "-" button targets it.
+                let focus = gtk::EventControllerFocus::new();
                 let list = list.clone();
-                let rows = rows.clone();
                 let row = row.clone();
-                move |_| {
-                    list.remove(&row);
-                    rows.borrow_mut().retain(|(r, _, _)| *r != row);
-                }
-            });
+                focus.connect_enter(move |_| list.select_row(Some(&row)));
+                entry.add_controller(focus);
+            }
             list.append(&row);
             rows.borrow_mut().push((row, key_entry, value_entry));
         })
     };
 
+    // Append an empty row whenever the last row isn't already empty.
+    {
+        let rows = rows.clone();
+        let add_row = add_row.clone();
+        *ensure_trailing.borrow_mut() = Box::new(move || {
+            let need_empty = match rows.borrow().last() {
+                None => true,
+                Some((_, key, value)) => !key.text().is_empty() || !value.text().is_empty(),
+            };
+            if need_empty {
+                add_row("", "");
+            }
+        });
+    }
+
     for (key, value) in parse_macros(settings) {
         add_row(&key, &value);
     }
+    (ensure_trailing.borrow())();
 
-    // Add / Import / Export.
-    let add_btn = gtk::Button::with_label(&gettext("Add"));
-    let import_btn = gtk::Button::with_label(&gettext("Import macros"));
-    let export_btn = gtk::Button::with_label(&gettext("Export macros"));
+    // Add / remove segmented buttons, then Import / Export.
+    let add_btn = gtk::Button::from_icon_name("list-add-symbolic");
+    add_btn.set_tooltip_text(Some(&gettext("Add")));
+    let remove_btn = gtk::Button::from_icon_name("list-remove-symbolic");
+    remove_btn.set_tooltip_text(Some(&gettext("Remove")));
+    let segmented = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .css_classes(["linked"])
+        .build();
+    segmented.append(&add_btn);
+    segmented.append(&remove_btn);
+
+    {
+        let remove_btn = remove_btn.clone();
+        let rows = rows.clone();
+        *update_remove.borrow_mut() = Box::new(move || {
+            // Only the un-deletable trailing empty row left → nothing to remove.
+            remove_btn.set_sensitive(rows.borrow().len() > 1);
+        });
+    }
+    (update_remove.borrow())();
+
     add_btn.connect_clicked({
         let add_row = add_row.clone();
-        move |_| add_row("", "")
+        let list = list.clone();
+        let rows = rows.clone();
+        let update_remove = update_remove.clone();
+        move |_| {
+            // Always append a fresh empty row and focus it.
+            add_row("", "");
+            if let Some((row, key_entry, _)) = rows.borrow().last() {
+                list.select_row(Some(row));
+                key_entry.grab_focus();
+            }
+            (update_remove.borrow())();
+        }
     });
+    remove_btn.connect_clicked({
+        let list = list.clone();
+        let rows = rows.clone();
+        let ensure_trailing = ensure_trailing.clone();
+        let update_remove = update_remove.clone();
+        move |_| {
+            let Some(row) = list.selected_row() else {
+                return;
+            };
+            // The trailing empty row is the "new macro" row; never delete it.
+            let is_trailing_empty = matches!(
+                rows.borrow().last(),
+                Some((last, key, value))
+                    if *last == row && key.text().is_empty() && value.text().is_empty()
+            );
+            if is_trailing_empty {
+                return;
+            }
+            rows.borrow_mut().retain(|(r, _, _)| *r != row);
+            list.remove(&row);
+            (ensure_trailing.borrow())();
+            (update_remove.borrow())();
+        }
+    });
+
+    let import_btn = gtk::Button::with_label(&gettext("Import macros"));
+    let export_btn = gtk::Button::with_label(&gettext("Export macros"));
     import_btn.connect_clicked({
         let add_row = add_row.clone();
         let window = window.clone();
+        let list = list.clone();
+        let rows = rows.clone();
+        let ensure_trailing = ensure_trailing.clone();
+        let update_remove = update_remove.clone();
         move |_| {
             let dialog = gtk::FileDialog::builder()
                 .title(gettext("Import macros"))
                 .build();
             let add_row = add_row.clone();
             let cb_window = window.clone();
+            let list = list.clone();
+            let rows = rows.clone();
+            let ensure_trailing = ensure_trailing.clone();
+            let update_remove = update_remove.clone();
             dialog.open(Some(&window), gtk::gio::Cancellable::NONE, move |res| {
                 // res is Err when the user cancels the picker — nothing to do.
                 let Ok(file) = res else { return };
@@ -589,9 +694,21 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
                 };
                 match parse_macro_file(&content) {
                     Ok(pairs) => {
+                        // Drop the trailing empty row so imports land after the
+                        // existing entries, then restore one at the end.
+                        let drop_last = matches!(
+                            rows.borrow().last(),
+                            Some((_, key, value))
+                                if key.text().is_empty() && value.text().is_empty()
+                        );
+                        if drop_last && let Some((row, _, _)) = rows.borrow_mut().pop() {
+                            list.remove(&row);
+                        }
                         for (key, value) in pairs {
                             add_row(&key, &value);
                         }
+                        (ensure_trailing.borrow())();
+                        (update_remove.borrow())();
                     }
                     Err(message) => show_import_error(&cb_window, &message),
                 }
@@ -643,32 +760,46 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
         }
     });
 
-    // Column headers.
-    let headers = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    // Column headers, roughly aligned with the cells.
+    let headers = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(12)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
     let h_key = gtk::Label::builder()
         .label(gettext("Shortcut"))
         .halign(gtk::Align::Start)
         .hexpand(true)
-        .css_classes(["dim-label"])
+        .css_classes(["dim-label", "caption"])
         .build();
+    let arrow_gap = gtk::Box::builder().width_request(16).build();
     let h_value = gtk::Label::builder()
         .label(gettext("Expansion"))
         .halign(gtk::Align::Start)
         .hexpand(true)
-        .css_classes(["dim-label"])
+        .css_classes(["dim-label", "caption"])
         .build();
     headers.append(&h_key);
+    headers.append(&arrow_gap);
     headers.append(&h_value);
-
-    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    buttons.append(&add_btn);
-    buttons.append(&import_btn);
-    buttons.append(&export_btn);
 
     let scroll = gtk::ScrolledWindow::builder()
         .vexpand(true)
+        .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&list)
         .build();
+
+    // Bottom action bar: +/- on the left, import/export on the right.
+    let actions = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .build();
+    actions.append(&segmented);
+    let spacer = gtk::Box::builder().hexpand(true).build();
+    actions.append(&spacer);
+    actions.append(&import_btn);
+    actions.append(&export_btn);
 
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
@@ -680,7 +811,7 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
         .build();
     content.append(&headers);
     content.append(&scroll);
-    content.append(&buttons);
+    content.append(&actions);
 
     let toolbar = adw::ToolbarView::new();
     toolbar.add_top_bar(&adw::HeaderBar::new());
