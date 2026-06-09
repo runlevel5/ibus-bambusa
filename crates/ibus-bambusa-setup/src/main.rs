@@ -352,6 +352,8 @@ fn open_help(parent: &impl IsA<gtk::Window>) {
         .margin_end(12)
         .build();
 
+    let mut groups = Vec::new();
+    let mut buttons = Vec::new();
     for (method, rows) in HELP {
         let group = adw::PreferencesGroup::builder().title(*method).build();
         for (effect, keys) in *rows {
@@ -360,22 +362,44 @@ fn open_help(parent: &impl IsA<gtk::Window>) {
             group.add(&row);
         }
         list.append(&group);
+        groups.push(group);
 
         let pill = gtk::Button::builder()
             .label(*method)
             .css_classes(["pill"])
             .build();
+        pills.insert(&pill, -1);
+        buttons.push(pill);
+    }
+
+    // A pill filters to its section; clicking the active pill again shows all.
+    let groups = Rc::new(groups);
+    let buttons = Rc::new(buttons);
+    let active: Rc<RefCell<Option<usize>>> = Rc::new(RefCell::new(None));
+    for (i, pill) in buttons.iter().enumerate() {
         pill.connect_clicked({
-            let clamp = clamp.clone();
-            let scrolled = scrolled.clone();
-            let group = group.clone();
+            let groups = groups.clone();
+            let buttons = buttons.clone();
+            let active = active.clone();
             move |_| {
-                if let Some((_, y)) = group.translate_coordinates(&clamp, 0.0, 0.0) {
-                    scrolled.vadjustment().set_value(y);
+                let selected = if *active.borrow() == Some(i) {
+                    None
+                } else {
+                    Some(i)
+                };
+                *active.borrow_mut() = selected;
+                for (j, group) in groups.iter().enumerate() {
+                    group.set_visible(selected.is_none() || selected == Some(j));
+                }
+                for (j, button) in buttons.iter().enumerate() {
+                    if selected == Some(j) {
+                        button.add_css_class("suggested-action");
+                    } else {
+                        button.remove_css_class("suggested-action");
+                    }
                 }
             }
         });
-        pills.insert(&pill, -1);
     }
 
     let outer = gtk::Box::new(gtk::Orientation::Vertical, 0);
