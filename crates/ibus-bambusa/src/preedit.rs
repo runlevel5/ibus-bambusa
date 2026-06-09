@@ -342,7 +342,7 @@ impl PreeditHandler {
     /// is rebuilt only when the engine flags actually changed.
     fn reload_config(&mut self) {
         let mut fresh = Config::load();
-        fresh.input_method = self.config.input_method.clone();
+        fresh.input_method.clone_from(&self.config.input_method);
         if fresh.engine_flags != self.config.engine_flags
             && let Some(im) = parse_input_method(&fresh.input_method)
         {

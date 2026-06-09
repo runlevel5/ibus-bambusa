@@ -5,6 +5,7 @@
 //! key immediately; the engine picks it up on the next focus.
 
 use std::cell::RefCell;
+use std::fmt::Write as _;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -582,12 +583,9 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
                 // res is Err when the user cancels the picker — nothing to do.
                 let Ok(file) = res else { return };
                 let Some(path) = file.path() else { return };
-                let content = match std::fs::read_to_string(&path) {
-                    Ok(content) => content,
-                    Err(_) => {
-                        show_import_error(&cb_window, &gettext("Could not read the file."));
-                        return;
-                    }
+                let Ok(content) = std::fs::read_to_string(&path) else {
+                    show_import_error(&cb_window, &gettext("Could not read the file."));
+                    return;
                 };
                 match parse_macro_file(&content) {
                     Ok(pairs) => {
@@ -618,7 +616,7 @@ fn open_macro_editor(settings: &Settings, parent: Option<&gtk::Window>) {
                         let key = key.text();
                         let key = key.trim();
                         if !key.is_empty() {
-                            out.push_str(&format!("{key}:{}\n", value.text().trim()));
+                            let _ = writeln!(out, "{key}:{}", value.text().trim());
                         }
                     }
                     let _ = std::fs::write(path, out);
