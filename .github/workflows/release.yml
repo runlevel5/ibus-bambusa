@@ -48,6 +48,9 @@ jobs:
         run: |
           NAME="ibus-bambusa-${{ needs.check-version.outputs.version }}"
           git archive --format=tar.gz --prefix="${NAME}/" -o "${NAME}.tar.gz" HEAD
+          # Checksum the tarball; .copr/Makefile fetches this and verifies the
+          # download before building the SRPM.
+          sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
 
       - name: Create release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
@@ -55,6 +58,8 @@ jobs:
           tag_name: v${{ needs.check-version.outputs.version }}
           name: v${{ needs.check-version.outputs.version }}
           generate_release_notes: true
-          files: ibus-bambusa-${{ needs.check-version.outputs.version }}.tar.gz
+          files: |
+            ibus-bambusa-${{ needs.check-version.outputs.version }}.tar.gz
+            ibus-bambusa-${{ needs.check-version.outputs.version }}.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

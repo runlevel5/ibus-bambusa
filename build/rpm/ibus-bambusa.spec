@@ -5,7 +5,10 @@ Summary:        Vietnamese input method engine for GNOME (Wayland)
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/runlevel5/ibus-bambusa
-Source0:        %{name}-%{version}.tar.gz
+# Release CI attaches this tarball (and a matching .sha256) to the GitHub
+# Release for the version tag. It unpacks to a name-version dir that autosetup
+# expects. See .github/workflows/release.yml and .copr/Makefile.
+Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  meson >= 0.61
 BuildRequires:  gcc
