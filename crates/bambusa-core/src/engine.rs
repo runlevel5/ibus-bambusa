@@ -186,17 +186,20 @@ impl BambusaEngine {
             key,
             is_upper,
         );
+        // Build the `composition + transformations` view once and reuse it for
+        // both the uow shortcut probe and the tone refresh.
+        let mut combined = composition.to_vec();
         if transformations.is_empty() {
             transformations =
                 generate_fallback_transformations(&mut self.ids, &rules, key, is_upper);
-            let mut new_comp = composition.to_vec();
-            new_comp.extend(transformations.iter().cloned());
-            if let Some(virtual_trans) = self.apply_uow_shortcut(&new_comp) {
-                transformations.push(virtual_trans);
+            combined.extend(transformations.iter().cloned());
+            if let Some(virtual_trans) = self.apply_uow_shortcut(&combined) {
+                transformations.push(virtual_trans.clone());
+                combined.push(virtual_trans);
             }
+        } else {
+            combined.extend(transformations.iter().cloned());
         }
-        let mut combined = composition.to_vec();
-        combined.extend(transformations.iter().cloned());
         let (refresh, retarget) = self.refresh_tone(&combined);
         transformations.extend(refresh);
         (transformations, retarget)

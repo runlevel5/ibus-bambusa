@@ -5,7 +5,9 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::flatten::{first_char, flatten, flatten_with_extra};
+use crate::flatten::{
+    first_char, flatten, flatten_appenders_into, flatten_indices_into, flatten_with_extra,
+};
 use crate::mode::{EngineFlags, Mode};
 use crate::rules::{EffectType, Mark, Rule, Tone};
 use crate::spelling::is_valid_cvc;
@@ -19,7 +21,7 @@ const TEMP_ID: TransId = TransId::MAX;
 
 /// One keystroke's effect on the composition: an appended character, or a
 /// tone/mark applied to an earlier transformation identified by `target`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Transformation {
     pub id: TransId,
     pub rule: Rule,
@@ -116,13 +118,6 @@ fn generate_appending_trans(
     new_appending_trans(ids, lower_key, is_upper_case)
 }
 
-fn filter_appending_composition(comp: &[Transformation]) -> Vec<Transformation> {
-    comp.iter()
-        .filter(|t| t.rule.effect_type == EffectType::Appending)
-        .cloned()
-        .collect()
-}
-
 fn find_root_target(comp: &[Transformation], id: TransId) -> TransId {
     match by_id(comp, id).and_then(|t| t.target) {
         Some(parent) => find_root_target(comp, parent),
@@ -132,47 +127,64 @@ fn find_root_target(comp: &[Transformation], id: TransId) -> TransId {
 
 /// Whether the composition forms a spellable (possibly partial) syllable.
 pub(crate) fn is_valid(comp: &[Transformation], input_is_full_complete: bool) -> bool {
+    let mut buf = String::new();
+    is_valid_buf(comp, input_is_full_complete, &mut buf)
+}
+
+/// As [`is_valid`], but reusing a caller-owned scratch buffer so a hot loop
+/// (e.g. [`extract_last_syllable`]) allocates once instead of per call.
+fn is_valid_buf(comp: &[Transformation], input_is_full_complete: bool, buf: &mut String) -> bool {
     if comp.len() <= 1 {
         return true;
     }
     // Reuse a single CVC split for both the tone check and the spelling check.
-    let (fc, vo, lc) = extract_cvc_trans(comp);
+    let split = cvc_split(comp);
     // The most recent tone must be compatible with the final consonant.
     for trans in comp.iter().rev() {
         if trans.rule.effect_type == EffectType::ToneTransformation {
             let last_tone = Tone::try_from(trans.rule.effect).unwrap_or_default();
-            if !tone_compatible_with_lc(&lc, last_tone) {
+            if !tone_compatible_with_lc(comp, split.lc(), last_tone, buf) {
                 return false;
             }
             break;
         }
     }
-    is_valid_cvc(&fc, &vo, &lc, input_is_full_complete)
+    is_valid_cvc(
+        comp,
+        split.fc(),
+        split.vo(),
+        split.lc(),
+        input_is_full_complete,
+        buf,
+    )
 }
 
 fn has_valid_tone(comp: &[Transformation], tone: Tone) -> bool {
     if tone == Tone::None || tone == Tone::Acute || tone == Tone::Dot {
         return true;
     }
-    let (_, _, lc) = extract_cvc_trans(comp);
-    tone_compatible_with_lc(&lc, tone)
+    let split = cvc_split(comp);
+    let mut buf = String::new();
+    tone_compatible_with_lc(comp, split.lc(), tone, &mut buf)
 }
 
-/// Whether `tone` may sit on a syllable ending in the already-extracted last
-/// consonant group `lc`. Stop consonants only admit the acute or dot tones.
-fn tone_compatible_with_lc(lc: &[Transformation], tone: Tone) -> bool {
+/// Whether `tone` may sit on a syllable whose last consonant group is the
+/// appenders at `lc` (indices into `comp`). Stop consonants only admit the
+/// acute or dot tones. `buf` is a caller-owned scratch buffer.
+fn tone_compatible_with_lc(
+    comp: &[Transformation],
+    lc: &[usize],
+    tone: Tone,
+    buf: &mut String,
+) -> bool {
     if tone == Tone::None || tone == Tone::Acute || tone == Tone::Dot {
         return true;
     }
     if lc.is_empty() {
         return true;
     }
-    let last_consonants = flatten(lc, Mode::ENGLISH | Mode::LOWERCASE);
-    !matches!(last_consonants.as_str(), "c" | "k" | "p" | "t" | "ch")
-}
-
-fn get_rightmost_vowels(comp: &[Transformation]) -> Vec<Transformation> {
-    extract_cvc_trans(comp).1
+    flatten_indices_into(comp, lc, Mode::ENGLISH | Mode::LOWERCASE, buf);
+    !matches!(buf.as_str(), "c" | "k" | "p" | "t" | "ch")
 }
 
 fn get_last_tone_transformation(comp: &[Transformation]) -> Option<usize> {
@@ -191,52 +203,122 @@ fn find_tone_target(comp: &[Transformation], std_style: bool) -> Option<TransId>
     if comp.is_empty() {
         return None;
     }
-    let (_, vo, lc) = extract_cvc_trans(comp);
-    let vowels = filter_appending_composition(&vo);
+    let split = cvc_split(comp);
+    find_tone_target_in(comp, &split, std_style)
+}
+
+/// As [`find_tone_target`], but reusing a CVC split the caller already computed.
+fn find_tone_target_in(
+    comp: &[Transformation],
+    split: &CvcSplit,
+    std_style: bool,
+) -> Option<TransId> {
+    let lc_empty = split.lc().is_empty();
+    // The vowel appenders only (matching the historical `filter_appending`).
+    let vowels: Vec<usize> = split
+        .vo()
+        .iter()
+        .copied()
+        .filter(|&i| comp[i].rule.effect_type == EffectType::Appending)
+        .collect();
     let mark_mode = Mode::ENGLISH | Mode::LOWERCASE | Mode::TONELESS | Mode::MARKLESS;
     match vowels.len() {
-        1 => Some(vowels[0].id),
+        1 => Some(comp[vowels[0]].id),
         2 if std_style => {
+            // A horn/hat carrier ('ơ'/'ê') takes the tone. The carrier may be a
+            // vowel appender or an effect that produces it, so scan both — the
+            // appenders first, then the effects targeting them in composition
+            // order — mirroring the historical materialised vowel group, where
+            // the last match wins.
             let mut target = None;
-            for trans in &vo {
-                if trans.rule.result == 'ơ' || trans.rule.result == 'ê' {
-                    target = Some(trans.target.unwrap_or(trans.id));
+            for &i in split.vo() {
+                let t = &comp[i];
+                if t.rule.result == 'ơ' || t.rule.result == 'ê' {
+                    target = Some(t.id);
                 }
             }
-            target.or(Some(if !lc.is_empty() {
-                vowels[1].id
+            for effect in comp {
+                if let Some(tgt) = effect.target
+                    && (effect.rule.result == 'ơ' || effect.rule.result == 'ê')
+                    && split.vo().iter().any(|&i| comp[i].id == tgt)
+                {
+                    target = Some(tgt);
+                }
+            }
+            target.or(Some(if !lc_empty {
+                comp[vowels[1]].id
             } else {
-                vowels[0].id
+                comp[vowels[0]].id
             }))
         }
         2 => {
-            if !lc.is_empty() {
-                Some(vowels[1].id)
+            if !lc_empty {
+                Some(comp[vowels[1]].id)
             } else {
-                let s = flatten(&vowels, mark_mode);
-                Some(match s.as_str() {
-                    "oa" | "oe" | "uy" | "ue" | "uo" => vowels[1].id,
-                    _ => vowels[0].id,
+                let mut buf = String::new();
+                flatten_appenders_into(comp, &vowels, mark_mode, &mut buf);
+                Some(match buf.as_str() {
+                    "oa" | "oe" | "uy" | "ue" | "uo" => comp[vowels[1]].id,
+                    _ => comp[vowels[0]].id,
                 })
             }
         }
         3 => {
-            let s = flatten(&vowels, mark_mode);
-            Some(if s == "uye" {
-                vowels[2].id
+            let mut buf = String::new();
+            flatten_appenders_into(comp, &vowels, mark_mode, &mut buf);
+            Some(if buf == "uye" {
+                comp[vowels[2]].id
             } else {
-                vowels[1].id
+                comp[vowels[1]].id
             })
         }
         _ => None,
     }
 }
 
-fn extract_atomic_trans(comp: &[Transformation], last_is_vowel: bool) -> usize {
-    let mut i = comp.len();
+/// An index-based decomposition of a composition into first-consonant, vowel
+/// and last-consonant groups.
+///
+/// `appenders` holds the indices (into the source composition) of the appending
+/// transformations, in order; the two boundaries partition them so a caller can
+/// inspect or flatten a group by index without cloning any transformation.
+struct CvcSplit {
+    appenders: Vec<usize>,
+    fc_end: usize,
+    vo_end: usize,
+}
+
+impl CvcSplit {
+    /// Indices of the first-consonant appenders.
+    fn fc(&self) -> &[usize] {
+        &self.appenders[..self.fc_end]
+    }
+
+    /// Indices of the vowel appenders.
+    fn vo(&self) -> &[usize] {
+        &self.appenders[self.fc_end..self.vo_end]
+    }
+
+    /// Indices of the last-consonant appenders.
+    fn lc(&self) -> &[usize] {
+        &self.appenders[self.vo_end..]
+    }
+}
+
+/// Length of the trailing run of `appenders[..upto]` whose result vowel-ness
+/// equals `last_is_vowel`; returns the index where that run begins.
+///
+/// Every entry of `appenders` is an appending transformation (target `None`),
+/// so unlike the historical slice form this need not re-check the target.
+fn atomic_split_idx(
+    comp: &[Transformation],
+    appenders: &[usize],
+    upto: usize,
+    last_is_vowel: bool,
+) -> usize {
+    let mut i = upto;
     while i > 0 {
-        let tmp = &comp[i - 1];
-        if tmp.target.is_none() && is_vowel(tmp.rule.result) != last_is_vowel {
+        if is_vowel(comp[appenders[i - 1]].rule.result) != last_is_vowel {
             break;
         }
         i -= 1;
@@ -244,43 +326,66 @@ fn extract_atomic_trans(comp: &[Transformation], last_is_vowel: bool) -> usize {
     i
 }
 
-fn extract_cvc_appending_trans(
-    appending: &[Transformation],
-) -> (
-    Vec<Transformation>,
-    Vec<Transformation>,
-    Vec<Transformation>,
-) {
-    let head_split = extract_atomic_trans(appending, false);
-    let mut last_consonant = appending[head_split..].to_vec();
-    let head = &appending[..head_split];
-    let fc_split = extract_atomic_trans(head, true);
-    let mut first_consonant = head[..fc_split].to_vec();
-    let mut vowel = head[fc_split..].to_vec();
+/// Partition the appending transformations of `comp` into the CVC groups.
+fn cvc_split(comp: &[Transformation]) -> CvcSplit {
+    let appenders: Vec<usize> = comp
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| t.target.is_none())
+        .map(|(i, _)| i)
+        .collect();
+    let n = appenders.len();
+    let head_split = atomic_split_idx(comp, &appenders, n, false);
+    let fc_split = atomic_split_idx(comp, &appenders, head_split, true);
+    let mut fc_end = fc_split;
+    let mut vo_end = head_split;
 
-    if !last_consonant.is_empty() && vowel.is_empty() && first_consonant.is_empty() {
-        first_consonant = last_consonant;
-        vowel = Vec::new();
-        last_consonant = Vec::new();
+    // All-consonant run (no vowel): the trailing consonants become the first
+    // consonant. Matches the historical reshuffle, which only fires when both
+    // the first consonant and vowel are empty (`fc_split == head_split == 0`).
+    if head_split < n && fc_split == 0 && head_split == 0 {
+        fc_end = n;
+        vo_end = n;
     }
 
     // 'gi' and 'qu' are treated as qualified initial consonants:
     //   ['g', 'ia', ''] -> ['gi', 'a', ''], ['q', 'ua', ''] -> ['qu', 'a', '']
     // but not ['g', 'ie', 'ng'].
-    if first_consonant.len() == 1
-        && !vowel.is_empty()
-        && ((first_consonant[0].rule.result == 'g'
-            && vowel[0].rule.result == 'i'
-            && vowel.len() > 1
-            && (vowel[1].rule.result != 'e' || last_consonant.is_empty()))
-            || (first_consonant[0].rule.result == 'q' && vowel[0].rule.result == 'u'))
-    {
-        first_consonant.push(vowel[0].clone());
-        vowel = vowel[1..].to_vec();
+    let vo_len = vo_end - fc_end;
+    if fc_end == 1 && vo_len >= 1 {
+        let fc0 = comp[appenders[0]].rule.result;
+        let vo0 = comp[appenders[fc_end]].rule.result;
+        let last_consonant_empty = vo_end == n;
+        let gi = fc0 == 'g'
+            && vo0 == 'i'
+            && vo_len > 1
+            && (comp[appenders[fc_end + 1]].rule.result != 'e' || last_consonant_empty);
+        let qu = fc0 == 'q' && vo0 == 'u';
+        if gi || qu {
+            fc_end += 1;
+        }
     }
-    (first_consonant, vowel, last_consonant)
+
+    CvcSplit {
+        appenders,
+        fc_end,
+        vo_end,
+    }
 }
 
+/// Clone the appenders at `indices` and append the effects in `comp` that
+/// target them, reproducing one historical CVC group. Test-only: production
+/// code works with [`CvcSplit`] index ranges and never materialises groups.
+#[cfg(test)]
+fn materialize_group(comp: &[Transformation], indices: &[usize]) -> Vec<Transformation> {
+    let mut group: Vec<Transformation> = indices.iter().map(|&i| comp[i].clone()).collect();
+    attach_effects(&mut group, comp);
+    group
+}
+
+/// Materialise the three CVC groups. Test-only reference used to prove
+/// [`cvc_split`] is equivalent to the historical decomposition.
+#[cfg(test)]
 fn extract_cvc_trans(
     comp: &[Transformation],
 ) -> (
@@ -288,22 +393,17 @@ fn extract_cvc_trans(
     Vec<Transformation>,
     Vec<Transformation>,
 ) {
-    let appending: Vec<Transformation> = comp
-        .iter()
-        .filter(|t| t.target.is_none())
-        .cloned()
-        .collect();
-    let (mut fc, mut vo, mut lc) = extract_cvc_appending_trans(&appending);
-    attach_effects(&mut fc, comp);
-    attach_effects(&mut vo, comp);
-    attach_effects(&mut lc, comp);
-    (fc, vo, lc)
+    let split = cvc_split(comp);
+    (
+        materialize_group(comp, split.fc()),
+        materialize_group(comp, split.vo()),
+        materialize_group(comp, split.lc()),
+    )
 }
 
 /// Append every effect in `comp` that targets one of the current members of
-/// `group`. The relative order of a single appender's effects is preserved
-/// (composition order); cross-appender order is irrelevant because flattening
-/// resolves each appender's effects independently by target.
+/// `group`. Test-only (see [`materialize_group`]).
+#[cfg(test)]
 fn attach_effects(group: &mut Vec<Transformation>, comp: &[Transformation]) {
     let appenders = group.len();
     for effect in comp {
@@ -356,16 +456,18 @@ pub(crate) fn extract_last_syllable(comp: &[Transformation]) -> usize {
     let word_split = extract_last_word(comp, &[]);
     let last = &comp[word_split..];
     let mut anchor = 0;
+    let mut buf = String::new();
     for i in 0..last.len() {
-        if !is_valid(&last[anchor..=i], false) {
+        if !is_valid_buf(&last[anchor..=i], false, &mut buf) {
             anchor = i;
         }
     }
     word_split + anchor
 }
 
-fn find_mark_target(comp: &[Transformation], rules: &[Rule]) -> (Option<TransId>, Rule) {
-    let str = flatten(comp, Mode::VIETNAMESE);
+/// `str` is the caller's `flatten(comp, VIETNAMESE)`, threaded in to avoid
+/// recomputing it.
+fn find_mark_target(comp: &[Transformation], rules: &[Rule], str: &str) -> (Option<TransId>, Rule) {
     for i in (0..comp.len()).rev() {
         let trans = &comp[i];
         for rule in rules {
@@ -375,7 +477,7 @@ fn find_mark_target(comp: &[Transformation], rules: &[Rule]) -> (Option<TransId>
             if trans.rule.result == rule.effect_on && rule.effect > 0 {
                 let target = find_root_target(comp, trans.id);
                 let extra = temp_effect(Some(target), rule.clone());
-                if str == flatten_with_extra(comp, &extra, Mode::VIETNAMESE) {
+                if *str == flatten_with_extra(comp, &extra, Mode::VIETNAMESE) {
                     continue;
                 }
                 let mut probe = comp.to_vec();
@@ -414,7 +516,7 @@ fn find_target(
         }
         return (target, rule.clone());
     }
-    find_mark_target(comp, rules)
+    find_mark_target(comp, rules, &str)
 }
 
 /// Resolve the tone target for `rule` under the active flags.
@@ -433,14 +535,16 @@ fn tone_target_for(comp: &[Transformation], rule: &Rule, flags: EngineFlags) -> 
     }
 }
 
+/// `str` is the caller's `flatten(comp, VIETNAMESE|TONELESS|LOWERCASE)`,
+/// threaded in to avoid recomputing it.
 fn generate_undo_transformations(
     ids: &mut IdGen,
     comp: &[Transformation],
     rules: &[Rule],
     flags: EngineFlags,
+    str: &str,
 ) -> Vec<Transformation> {
     let mut out = Vec::new();
-    let str = flatten(comp, Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE);
     for rule in rules {
         match rule.effect_type {
             EffectType::ToneTransformation => {
@@ -477,6 +581,7 @@ fn generate_undo_transformations(
                                 &extra,
                                 Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE,
                             )
+                            .as_str()
                         {
                             continue;
                         }
@@ -557,16 +662,21 @@ pub(crate) fn generate_transformations(
         return out;
     }
 
-    // No target: ươ/ưo(i/c/ng) + o -> uô.
-    if REG_UH_O.is_match(&flatten(
-        comp,
-        Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE,
-    )) {
-        let vowels = filter_appending_composition(&get_rightmost_vowels(comp));
-        if !vowels.is_empty() {
+    // No target: ươ/ưo(i/c/ng) + o -> uô. The toneless form is reused by the
+    // undo pass below.
+    let toneless = flatten(comp, Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE);
+    if REG_UH_O.is_match(&toneless) {
+        let split = cvc_split(comp);
+        let first_vowel = split
+            .vo()
+            .iter()
+            .copied()
+            .find(|&i| comp[i].rule.effect_type == EffectType::Appending);
+        if let Some(vi) = first_vowel {
+            let vowel0_id = comp[vi].id;
             let trans = Transformation {
                 id: ids.next_id(),
-                target: Some(vowels[0].id),
+                target: Some(vowel0_id),
                 rule: Rule {
                     effect_type: EffectType::MarkTransformation,
                     key: '\0',
@@ -579,7 +689,7 @@ pub(crate) fn generate_transformations(
             probe.push(trans.clone());
             let (t, applicable_rule) = find_target(&probe, rules, flags);
             if let Some(t_id) = t
-                && t_id != vowels[0].id
+                && t_id != vowel0_id
             {
                 out.push(trans);
                 out.push(Transformation {
@@ -594,7 +704,7 @@ pub(crate) fn generate_transformations(
     }
 
     // An effect key with no target tries to undo its effects: ươ + w -> uow.
-    let undo = generate_undo_transformations(ids, comp, rules, flags);
+    let undo = generate_undo_transformations(ids, comp, rules, flags, &toneless);
     if !undo.is_empty() {
         out.extend(undo);
         out.push(new_appending_trans(ids, lower_key, is_upper_case));
@@ -647,17 +757,17 @@ pub(crate) fn refresh_last_tone_target(
     comp: &[Transformation],
     std_style: bool,
 ) -> (Vec<Transformation>, Option<Retarget>) {
-    let rightmost = get_rightmost_vowels(comp);
     let Some(lt_idx) = get_last_tone_transformation(comp) else {
         return (Vec::new(), None);
     };
-    if rightmost.is_empty() {
+    let split = cvc_split(comp);
+    if split.vo().is_empty() {
         return (Vec::new(), None);
     }
     let lt_id = comp[lt_idx].id;
     let lt_target = comp[lt_idx].target;
     let lt_rule = comp[lt_idx].rule.clone();
-    let new_target = find_tone_target(comp, std_style);
+    let new_target = find_tone_target_in(comp, &split, std_style);
     if lt_target == new_target {
         return (Vec::new(), None);
     }
@@ -698,12 +808,14 @@ mod tests {
     use super::*;
     use crate::input_method::parse_input_method;
 
-    /// Drive a whole string through the same pipeline the engine will use and
-    /// flatten the result, so these tests exercise the real algorithm.
-    fn type_word(im_name: &str, keys: &str, flags: EngineFlags) -> String {
+    /// Drive a whole string through the same pipeline the engine will use,
+    /// returning the composition after each keystroke so tests can inspect the
+    /// real intermediate states.
+    fn drive(im_name: &str, keys: &str, flags: EngineFlags) -> Vec<Vec<Transformation>> {
         let im = parse_input_method(im_name).unwrap();
         let mut ids = IdGen::new();
         let mut comp: Vec<Transformation> = Vec::new();
+        let mut steps = Vec::new();
         for ch in keys.chars() {
             let lower = to_lower(ch);
             let is_upper = ch.is_uppercase();
@@ -745,8 +857,194 @@ mod tests {
                 }
             }
             comp = next;
+            steps.push(comp.clone());
         }
-        flatten(&comp, Mode::VIETNAMESE)
+        steps
+    }
+
+    /// Drive a string and flatten the final composition.
+    fn type_word(im_name: &str, keys: &str, flags: EngineFlags) -> String {
+        match drive(im_name, keys, flags).last() {
+            Some(comp) => flatten(comp, Mode::VIETNAMESE),
+            None => String::new(),
+        }
+    }
+
+    // --- Reference implementation of the historical CVC split, frozen here so a
+    // --- differential test can prove the new index-based split is equivalent.
+
+    fn ref_atomic(comp: &[Transformation], last_is_vowel: bool) -> usize {
+        let mut i = comp.len();
+        while i > 0 {
+            let tmp = &comp[i - 1];
+            if tmp.target.is_none() && is_vowel(tmp.rule.result) != last_is_vowel {
+                break;
+            }
+            i -= 1;
+        }
+        i
+    }
+
+    fn ref_extract_cvc(
+        comp: &[Transformation],
+    ) -> (
+        Vec<Transformation>,
+        Vec<Transformation>,
+        Vec<Transformation>,
+    ) {
+        let appending: Vec<Transformation> = comp
+            .iter()
+            .filter(|t| t.target.is_none())
+            .cloned()
+            .collect();
+        let head_split = ref_atomic(&appending, false);
+        let mut last_consonant = appending[head_split..].to_vec();
+        let head = &appending[..head_split];
+        let fc_split = ref_atomic(head, true);
+        let mut first_consonant = head[..fc_split].to_vec();
+        let mut vowel = head[fc_split..].to_vec();
+
+        if !last_consonant.is_empty() && vowel.is_empty() && first_consonant.is_empty() {
+            first_consonant = last_consonant;
+            vowel = Vec::new();
+            last_consonant = Vec::new();
+        }
+
+        if first_consonant.len() == 1
+            && !vowel.is_empty()
+            && ((first_consonant[0].rule.result == 'g'
+                && vowel[0].rule.result == 'i'
+                && vowel.len() > 1
+                && (vowel[1].rule.result != 'e' || last_consonant.is_empty()))
+                || (first_consonant[0].rule.result == 'q' && vowel[0].rule.result == 'u'))
+        {
+            first_consonant.push(vowel[0].clone());
+            vowel = vowel[1..].to_vec();
+        }
+
+        let mut fc = first_consonant;
+        let mut vo = vowel;
+        let mut lc = last_consonant;
+        attach_effects(&mut fc, comp);
+        attach_effects(&mut vo, comp);
+        attach_effects(&mut lc, comp);
+        (fc, vo, lc)
+    }
+
+    /// Frozen copy of the historical `find_tone_target`, for differential testing.
+    fn ref_find_tone_target(comp: &[Transformation], std_style: bool) -> Option<TransId> {
+        if comp.is_empty() {
+            return None;
+        }
+        let (_, vo, lc) = ref_extract_cvc(comp);
+        let vowels: Vec<Transformation> = vo
+            .iter()
+            .filter(|t| t.rule.effect_type == EffectType::Appending)
+            .cloned()
+            .collect();
+        let mark_mode = Mode::ENGLISH | Mode::LOWERCASE | Mode::TONELESS | Mode::MARKLESS;
+        match vowels.len() {
+            1 => Some(vowels[0].id),
+            2 if std_style => {
+                let mut target = None;
+                for trans in &vo {
+                    if trans.rule.result == 'ơ' || trans.rule.result == 'ê' {
+                        target = Some(trans.target.unwrap_or(trans.id));
+                    }
+                }
+                target.or(Some(if !lc.is_empty() {
+                    vowels[1].id
+                } else {
+                    vowels[0].id
+                }))
+            }
+            2 => {
+                if !lc.is_empty() {
+                    Some(vowels[1].id)
+                } else {
+                    let s = flatten(&vowels, mark_mode);
+                    Some(match s.as_str() {
+                        "oa" | "oe" | "uy" | "ue" | "uo" => vowels[1].id,
+                        _ => vowels[0].id,
+                    })
+                }
+            }
+            3 => {
+                let s = flatten(&vowels, mark_mode);
+                Some(if s == "uye" {
+                    vowels[2].id
+                } else {
+                    vowels[1].id
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// Tiny deterministic PRNG so the fuzz corpus is reproducible.
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            self.0 >> 33
+        }
+    }
+
+    #[test]
+    fn cvc_split_and_tone_target_match_reference() {
+        // Effect keys vary by method; a broad alphabet drives the engine into
+        // many composition shapes (gi/qu, all-consonant, multi-vowel, marks).
+        let configs: &[(&str, &str)] = &[
+            ("Telex", "abcdeghiklmnopqrstuvxysfrxjwzAEO"),
+            ("Telex 2", "aeiouwdsfrxjbcghklmnpqtv][}{"),
+            ("VNI", "aeioudbcghklmnpqstvx0123456789"),
+            ("VIQR", "aeioudbcghklmnpqstvx^'`?~.+()"),
+        ];
+        let flag_sets = [
+            EngineFlags::STD,
+            EngineFlags::empty(),
+            EngineFlags::FREE_TONE_MARKING,
+            EngineFlags::FREE_TONE_MARKING | EngineFlags::STD_TONE_STYLE,
+        ];
+
+        let mut rng = Lcg(0x1234_5678_9abc_def0);
+        let mut checked = 0u64;
+        for (im, alphabet) in configs {
+            let alpha: Vec<char> = alphabet.chars().collect();
+            for &flags in &flag_sets {
+                for _ in 0..120 {
+                    let len = 1 + (rng.next() % 9) as usize;
+                    let keys: String = (0..len)
+                        .map(|_| alpha[(rng.next() as usize) % alpha.len()])
+                        .collect();
+                    for comp in drive(im, &keys, flags) {
+                        // Every contiguous sub-range: is_valid runs on such slices.
+                        for a in 0..=comp.len() {
+                            for b in a..=comp.len() {
+                                let slice = &comp[a..b];
+                                assert_eq!(
+                                    extract_cvc_trans(slice),
+                                    ref_extract_cvc(slice),
+                                    "cvc im={im} keys={keys:?} flags={flags:?} range={a}..{b}"
+                                );
+                                for std_style in [false, true] {
+                                    assert_eq!(
+                                        find_tone_target(slice, std_style),
+                                        ref_find_tone_target(slice, std_style),
+                                        "tone_target im={im} keys={keys:?} std={std_style} range={a}..{b}"
+                                    );
+                                }
+                                checked += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(checked > 100_000, "corpus too small: {checked}");
     }
 
     #[test]

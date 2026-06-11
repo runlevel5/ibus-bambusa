@@ -1,7 +1,7 @@
 //! Vietnamese phonotactic validation: whether a (first-consonant, vowel,
 //! last-consonant) decomposition forms a spellable syllable.
 
-use crate::flatten::flatten_into;
+use crate::flatten::flatten_indices_into;
 use crate::mode::Mode;
 use crate::transform::Transformation;
 use crate::unicode_tables::add_mark_to_toneless_char;
@@ -80,25 +80,28 @@ fn lookup(seq: &[&str], input: &str, input_is_full: bool, input_is_complete: boo
     ret
 }
 
-/// Whether `fc`/`vo`/`lc` (the transformation groups for the first consonant,
-/// vowel and last consonant) form a valid (possibly partial) Vietnamese syllable.
+/// Whether the first-consonant/vowel/last-consonant groups — given as `fc`/`vo`/
+/// `lc` index slices into `comp` — form a valid (possibly partial) Vietnamese
+/// syllable.
 ///
-/// The groups are flattened through a single reused `buf` because each group's
-/// text is only needed to compute its class mask, so the three flattens never
-/// overlap — one allocation instead of three on this hot path.
+/// Each group is flattened through a single reused `buf` because its text is
+/// only needed to compute its class mask, so the three flattens never overlap —
+/// one allocation instead of three on this hot path, and the groups never need
+/// to be materialised.
 pub(crate) fn is_valid_cvc(
-    fc: &[Transformation],
-    vo: &[Transformation],
-    lc: &[Transformation],
+    comp: &[Transformation],
+    fc: &[usize],
+    vo: &[usize],
+    lc: &[usize],
     input_is_full_complete: bool,
+    buf: &mut String,
 ) -> bool {
     let m = Mode::VIETNAMESE | Mode::LOWERCASE | Mode::TONELESS;
-    let mut buf = String::new();
     let fc_mask = if !fc.is_empty() {
-        flatten_into(fc, m, &mut buf);
+        flatten_indices_into(comp, fc, m, buf);
         let mask = lookup(
             FIRST_CONSONANT_SEQS,
-            &buf,
+            buf,
             input_is_full_complete || !vo.is_empty(),
             true,
         );
@@ -110,10 +113,10 @@ pub(crate) fn is_valid_cvc(
         None
     };
     let vo_mask = if !vo.is_empty() {
-        flatten_into(vo, m, &mut buf);
+        flatten_indices_into(comp, vo, m, buf);
         let mask = lookup(
             VOWEL_SEQS,
-            &buf,
+            buf,
             input_is_full_complete || !lc.is_empty(),
             input_is_full_complete,
         );
@@ -125,8 +128,8 @@ pub(crate) fn is_valid_cvc(
         None
     };
     let lc_mask = if !lc.is_empty() {
-        flatten_into(lc, m, &mut buf);
-        let mask = lookup(LAST_CONSONANT_SEQS, &buf, input_is_full_complete, true);
+        flatten_indices_into(comp, lc, m, buf);
+        let mask = lookup(LAST_CONSONANT_SEQS, buf, input_is_full_complete, true);
         if mask == 0 {
             return false;
         }
@@ -182,13 +185,14 @@ mod tests {
     use crate::rules::{EffectType, Rule};
     use crate::transform::TransId;
 
-    /// Build a group of plain appending transformations from a string, so the
-    /// tests can express syllable parts as text.
-    fn group(s: &str) -> Vec<Transformation> {
-        s.chars()
-            .enumerate()
-            .map(|(i, c)| Transformation {
-                id: i as TransId,
+    /// Append plain appending transformations for each char of `s` to `comp`,
+    /// returning the indices of those appenders.
+    fn push_group(comp: &mut Vec<Transformation>, s: &str) -> Vec<usize> {
+        let start = comp.len();
+        for c in s.chars() {
+            let id = comp.len() as TransId;
+            comp.push(Transformation {
+                id,
                 rule: Rule {
                     key: c,
                     effect_on: c,
@@ -198,12 +202,18 @@ mod tests {
                 },
                 target: None,
                 is_upper_case: false,
-            })
-            .collect()
+            });
+        }
+        (start..comp.len()).collect()
     }
 
     fn valid(fc: &str, vo: &str, lc: &str, full: bool) -> bool {
-        is_valid_cvc(&group(fc), &group(vo), &group(lc), full)
+        let mut comp = Vec::new();
+        let fci = push_group(&mut comp, fc);
+        let voi = push_group(&mut comp, vo);
+        let lci = push_group(&mut comp, lc);
+        let mut buf = String::new();
+        is_valid_cvc(&comp, &fci, &voi, &lci, full, &mut buf)
     }
 
     #[test]

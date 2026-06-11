@@ -107,6 +107,59 @@ pub(crate) fn flatten_with_extra(
     out
 }
 
+/// Flatten the appenders at `indices` (into `composition`) together with the
+/// effects targeting them, into `out` (cleared first). Equivalent to
+/// materialising that CVC group and flattening it, but without the clones.
+///
+/// In English mode the targeting effects are emitted after the appenders, in
+/// composition order, matching how a materialised group is laid out.
+pub(crate) fn flatten_indices_into(
+    composition: &[Transformation],
+    indices: &[usize],
+    mode: Mode,
+    out: &mut String,
+) {
+    out.clear();
+    let english = mode.contains(Mode::ENGLISH);
+    for &i in indices {
+        let app = &composition[i];
+        if is_emitted(app, english) {
+            out.push(resolve_char(composition, None, app, mode));
+        }
+    }
+    if english {
+        for effect in composition {
+            let Some(target) = effect.target else {
+                continue;
+            };
+            if is_emitted(effect, english) && indices.iter().any(|&i| composition[i].id == target) {
+                out.push(resolve_char(composition, None, effect, mode));
+            }
+        }
+    }
+}
+
+/// Flatten only the appenders at `indices` (into `composition`) — each
+/// appender's own character, ignoring any effects that target it — into `out`
+/// (cleared first). Equivalent to flattening a slice that contains just those
+/// appenders.
+pub(crate) fn flatten_appenders_into(
+    composition: &[Transformation],
+    indices: &[usize],
+    mode: Mode,
+    out: &mut String,
+) {
+    out.clear();
+    let english = mode.contains(Mode::ENGLISH);
+    for &i in indices {
+        let app = &composition[i];
+        if is_emitted(app, english) {
+            // Empty effect source: emit the appender's own character only.
+            out.push(resolve_char(&[], None, app, mode));
+        }
+    }
+}
+
 /// The first character [`flatten`] would emit, without allocating. Used by the
 /// word-boundary scans that only need to inspect the leading character.
 pub(crate) fn first_char(composition: &[Transformation], mode: Mode) -> Option<char> {
