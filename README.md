@@ -1,6 +1,6 @@
 # ibus-bambusa
 
-A simple, opinionated Vietnamese input method for **GNOME (Wayland only)**.
+A simple, opinionated Vietnamese input method for **GNOME 50 or newer**.
 
 `ibus-bambusa` is an [IBus](https://github.com/ibus/ibus) engine that turns
 keystrokes into Vietnamese text — Telex, VNI, VIQR and the usual variants.
@@ -10,13 +10,17 @@ keystrokes into Vietnamese text — Telex, VNI, VIQR and the usual variants.
 This project deliberately keeps a narrow scope. It does only what GNOME on
 Wayland supports well, and nothing else:
 
-- **Wayland only**, targeting what GNOME actually supports. No X11, no
-  `XTest` key faking, no X11 clipboard or window introspection.
-- **One global input mode**, switched manually. No per-application mode
-  detection (GNOME no longer exposes the focused window to do this safely).
+- **Wayland only**, targeting what GNOME 50 (or newer) actually supports. No X11, no
+  `XTest` key faking, no X11 clipboard or window introspection. If GNOME decides
+  to re-introduce support X11, so will this app.
+- **Native GNOME input switching**, adhering strictly to GNOME. Both global and
+  per window switching method are provided.
 - **Full charset output**: Unicode plus the legacy Vietnamese encodings
   (TCVN3, VNI-Win, VIQR, VISCII, VPS, BK HCM, Vietware, NCR, …).
-- **Native GUI.** Configuration lives in GSettings/dconf exposed via native GNOME GUI
+- **Native libadwaita GUI.** Configuration lives in GSettings/dconf exposed
+  via native gnome-control-center.
+- **GNOME lifecycle**, providing support to active GNOME releases only. No plan
+  to support releases that has reached EOL.
 
 If you need the features that the app does not offer, please consider alternatives:
 
