@@ -1,81 +1,127 @@
 //! Reconstructing displayable text from a composition.
 
-use std::collections::HashMap;
-
 use crate::mode::Mode;
 use crate::rules::{EffectType, Mark};
-use crate::transform::{TransId, Transformation};
+use crate::transform::Transformation;
 use crate::unicode_tables::{add_mark_to_char, add_tone_to_char, to_lower, to_upper};
+
+/// Whether `trans` contributes a visible character under `english`.
+///
+/// Appending transformations carry the output characters; in English mode every
+/// non-virtual transformation is emitted as its raw key. Virtual transformations
+/// (`key == '\0'`) never produce a character.
+#[inline]
+fn is_emitted(trans: &Transformation, english: bool) -> bool {
+    (english || trans.rule.effect_type == EffectType::Appending) && trans.rule.key != '\0'
+}
+
+/// Fold a single effect transformation into `chr` if it targets `app`.
+#[inline]
+fn apply_effect(chr: char, app: &Transformation, effect_trans: &Transformation) -> char {
+    if effect_trans.rule.effect_type == EffectType::Appending || effect_trans.target != Some(app.id)
+    {
+        return chr;
+    }
+    let effect = &effect_trans.rule;
+    match effect.effect_type {
+        EffectType::MarkTransformation => {
+            if effect.effect == Mark::Raw as u8 {
+                app.rule.key
+            } else {
+                add_mark_to_char(chr, effect.effect)
+            }
+        }
+        EffectType::ToneTransformation => add_tone_to_char(chr, effect.effect),
+        _ => chr,
+    }
+}
+
+/// Resolve the final character emitted by appender `app`, applying every effect
+/// in `composition` (plus an optional `extra` appended transformation) that
+/// targets it, in order, then the `mode` post-processing (toneless/markless/case).
+fn resolve_char(
+    composition: &[Transformation],
+    extra: Option<&Transformation>,
+    app: &Transformation,
+    mode: Mode,
+) -> char {
+    let english = mode.contains(Mode::ENGLISH);
+    let mut chr = if english {
+        app.rule.key
+    } else {
+        let mut chr = app.rule.effect_on;
+        for effect_trans in composition.iter().chain(extra) {
+            chr = apply_effect(chr, app, effect_trans);
+        }
+        chr
+    };
+
+    if mode.contains(Mode::TONELESS) {
+        chr = add_tone_to_char(chr, 0);
+    }
+    if mode.contains(Mode::MARKLESS) {
+        chr = add_mark_to_char(chr, 0);
+    }
+    if mode.contains(Mode::LOWERCASE) {
+        chr = to_lower(chr);
+    } else if app.is_upper_case {
+        chr = to_upper(chr);
+    }
+    chr
+}
 
 /// Flatten a composition into its textual form under `mode`.
 pub(crate) fn flatten(composition: &[Transformation], mode: Mode) -> String {
-    canvas(composition, mode).into_iter().collect()
+    let mut out = String::with_capacity(composition.len());
+    flatten_into(composition, mode, &mut out);
+    out
 }
 
-pub(crate) fn canvas(composition: &[Transformation], mode: Mode) -> Vec<char> {
+/// Flatten into a caller-owned buffer (cleared first), so a hot path can reuse
+/// one allocation across many flattens instead of allocating a fresh `String`.
+pub(crate) fn flatten_into(composition: &[Transformation], mode: Mode, out: &mut String) {
+    out.clear();
     let english = mode.contains(Mode::ENGLISH);
-
-    // Appending transformations carry the output characters; every other
-    // transformation contributes an effect to the appender it targets.
-    let mut appending: Vec<usize> = Vec::new();
-    let mut effects: HashMap<TransId, Vec<usize>> = HashMap::new();
-    for (i, trans) in composition.iter().enumerate() {
-        if english || trans.rule.effect_type == EffectType::Appending {
-            if trans.rule.key == '\0' {
-                continue; // virtual key
-            }
-            appending.push(i);
-        } else if let Some(target) = trans.target {
-            effects.entry(target).or_default().push(i);
+    for trans in composition {
+        if is_emitted(trans, english) {
+            out.push(resolve_char(composition, None, trans, mode));
         }
     }
+}
 
-    let mut out = Vec::with_capacity(appending.len());
-    for &ai in &appending {
-        let app = &composition[ai];
-        let mut chr = if english {
-            app.rule.key
-        } else {
-            let mut chr = app.rule.effect_on;
-            for &ei in effects.get(&app.id).into_iter().flatten() {
-                let effect = &composition[ei].rule;
-                match effect.effect_type {
-                    EffectType::MarkTransformation => {
-                        if effect.effect == Mark::Raw as u8 {
-                            chr = app.rule.key;
-                        } else {
-                            chr = add_mark_to_char(chr, effect.effect);
-                        }
-                    }
-                    EffectType::ToneTransformation => {
-                        chr = add_tone_to_char(chr, effect.effect);
-                    }
-                    _ => {}
-                }
-            }
-            chr
-        };
-
-        if mode.contains(Mode::TONELESS) {
-            chr = add_tone_to_char(chr, 0);
+/// Flatten `composition` with one `extra` transformation appended, without
+/// cloning the composition. Equivalent to building `[composition, extra]` and
+/// flattening it; used by the probe-and-compare paths in `transform`.
+pub(crate) fn flatten_with_extra(
+    composition: &[Transformation],
+    extra: &Transformation,
+    mode: Mode,
+) -> String {
+    let english = mode.contains(Mode::ENGLISH);
+    let mut out = String::with_capacity(composition.len() + 1);
+    for trans in composition.iter().chain(std::iter::once(extra)) {
+        if is_emitted(trans, english) {
+            out.push(resolve_char(composition, Some(extra), trans, mode));
         }
-        if mode.contains(Mode::MARKLESS) {
-            chr = add_mark_to_char(chr, 0);
-        }
-        if mode.contains(Mode::LOWERCASE) {
-            chr = to_lower(chr);
-        } else if app.is_upper_case {
-            chr = to_upper(chr);
-        }
-        out.push(chr);
     }
     out
+}
+
+/// The first character [`flatten`] would emit, without allocating. Used by the
+/// word-boundary scans that only need to inspect the leading character.
+pub(crate) fn first_char(composition: &[Transformation], mode: Mode) -> Option<char> {
+    let english = mode.contains(Mode::ENGLISH);
+    composition
+        .iter()
+        .find(|trans| is_emitted(trans, english))
+        .map(|trans| resolve_char(composition, None, trans, mode))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::rules::{EffectType, Rule, Tone};
+    use crate::transform::TransId;
 
     fn appending(id: TransId, key: char, upper: bool) -> Transformation {
         Transformation {

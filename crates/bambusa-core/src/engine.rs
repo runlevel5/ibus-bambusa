@@ -155,19 +155,17 @@ impl BambusaEngine {
 
     fn new_composition(
         &mut self,
-        composition: Vec<Transformation>,
+        mut composition: Vec<Transformation>,
         key: char,
         is_upper: bool,
     ) -> Vec<Transformation> {
+        // The prefix before the last syllable is unchanged, so mutate in place:
+        // generate from the last-syllable slice, then append what it produced.
         let split = extract_last_syllable(&composition);
-        let mut last_syllable = composition[split..].to_vec();
-        let (generated, retarget) = self.generate(&last_syllable, key, is_upper);
-        last_syllable.extend(generated);
-
-        let mut result = composition[..split].to_vec();
-        result.extend(last_syllable);
-        apply_retarget(&mut result, retarget);
-        result
+        let (generated, retarget) = self.generate(&composition[split..], key, is_upper);
+        composition.extend(generated);
+        apply_retarget(&mut composition, retarget);
+        composition
     }
 
     /// Generate the transformations a keypress adds: try rule-based generation,

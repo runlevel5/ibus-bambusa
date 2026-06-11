@@ -1,12 +1,11 @@
 //! The composition: an ordered list of [`Transformation`]s and the machinery
 //! that builds and edits it from keystrokes.
 
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::flatten::{canvas, flatten};
+use crate::flatten::{first_char, flatten, flatten_with_extra};
 use crate::mode::{EngineFlags, Mode};
 use crate::rules::{EffectType, Mark, Rule, Tone};
 use crate::spelling::is_valid_cvc;
@@ -136,24 +135,19 @@ pub(crate) fn is_valid(comp: &[Transformation], input_is_full_complete: bool) ->
     if comp.len() <= 1 {
         return true;
     }
+    // Reuse a single CVC split for both the tone check and the spelling check.
+    let (fc, vo, lc) = extract_cvc_trans(comp);
     // The most recent tone must be compatible with the final consonant.
     for trans in comp.iter().rev() {
         if trans.rule.effect_type == EffectType::ToneTransformation {
             let last_tone = Tone::try_from(trans.rule.effect).unwrap_or_default();
-            if !has_valid_tone(comp, last_tone) {
+            if !tone_compatible_with_lc(&lc, last_tone) {
                 return false;
             }
             break;
         }
     }
-    let (fc, vo, lc) = extract_cvc_trans(comp);
-    let m = Mode::VIETNAMESE | Mode::LOWERCASE | Mode::TONELESS;
-    is_valid_cvc(
-        &flatten(&fc, m),
-        &flatten(&vo, m),
-        &flatten(&lc, m),
-        input_is_full_complete,
-    )
+    is_valid_cvc(&fc, &vo, &lc, input_is_full_complete)
 }
 
 fn has_valid_tone(comp: &[Transformation], tone: Tone) -> bool {
@@ -161,11 +155,19 @@ fn has_valid_tone(comp: &[Transformation], tone: Tone) -> bool {
         return true;
     }
     let (_, _, lc) = extract_cvc_trans(comp);
+    tone_compatible_with_lc(&lc, tone)
+}
+
+/// Whether `tone` may sit on a syllable ending in the already-extracted last
+/// consonant group `lc`. Stop consonants only admit the acute or dot tones.
+fn tone_compatible_with_lc(lc: &[Transformation], tone: Tone) -> bool {
+    if tone == Tone::None || tone == Tone::Acute || tone == Tone::Dot {
+        return true;
+    }
     if lc.is_empty() {
         return true;
     }
-    let last_consonants = flatten(&lc, Mode::ENGLISH | Mode::LOWERCASE);
-    // Stop consonants may only carry the ACUTE or DOT tones.
+    let last_consonants = flatten(lc, Mode::ENGLISH | Mode::LOWERCASE);
     !matches!(last_consonants.as_str(), "c" | "k" | "p" | "t" | "ch")
 }
 
@@ -286,46 +288,43 @@ fn extract_cvc_trans(
     Vec<Transformation>,
     Vec<Transformation>,
 ) {
-    let mut trans_map: HashMap<TransId, Vec<Transformation>> = HashMap::new();
-    let mut appending = Vec::new();
-    for trans in comp {
-        match trans.target {
-            None => appending.push(trans.clone()),
-            Some(target) => trans_map.entry(target).or_default().push(trans.clone()),
-        }
-    }
+    let appending: Vec<Transformation> = comp
+        .iter()
+        .filter(|t| t.target.is_none())
+        .cloned()
+        .collect();
     let (mut fc, mut vo, mut lc) = extract_cvc_appending_trans(&appending);
-    attach_effects(&mut fc, &trans_map);
-    attach_effects(&mut vo, &trans_map);
-    attach_effects(&mut lc, &trans_map);
+    attach_effects(&mut fc, comp);
+    attach_effects(&mut vo, comp);
+    attach_effects(&mut lc, comp);
     (fc, vo, lc)
 }
 
-fn attach_effects(
-    group: &mut Vec<Transformation>,
-    trans_map: &HashMap<TransId, Vec<Transformation>>,
-) {
-    let mut extra = Vec::new();
-    for t in group.iter() {
-        if let Some(effects) = trans_map.get(&t.id) {
-            extra.extend(effects.iter().cloned());
+/// Append every effect in `comp` that targets one of the current members of
+/// `group`. The relative order of a single appender's effects is preserved
+/// (composition order); cross-appender order is irrelevant because flattening
+/// resolves each appender's effects independently by target.
+fn attach_effects(group: &mut Vec<Transformation>, comp: &[Transformation]) {
+    let appenders = group.len();
+    for effect in comp {
+        if let Some(target) = effect.target
+            && group[..appenders].iter().any(|t| t.id == target)
+        {
+            group.push(effect.clone());
         }
     }
-    group.extend(extra);
 }
 
 /// Split index such that `comp[..n]` is everything before the last word and
 /// `comp[n..]` is the last word.
 pub(crate) fn extract_last_word(comp: &[Transformation], effect_keys: &[char]) -> usize {
     for i in (0..comp.len()).rev() {
-        let c = canvas(
+        let Some(c0) = first_char(
             &comp[i..],
             Mode::VIETNAMESE | Mode::LOWERCASE | Mode::TONELESS | Mode::MARKLESS,
-        );
-        if c.is_empty() {
+        ) else {
             continue;
-        }
-        let c0 = c[0];
+        };
         if !is_alpha(c0) && !effect_keys.contains(&c0) {
             if i == comp.len() - 1 {
                 return comp.len();
@@ -339,11 +338,10 @@ pub(crate) fn extract_last_word(comp: &[Transformation], effect_keys: &[char]) -
 /// Like [`extract_last_word`] but breaks only on a literal space.
 pub(crate) fn extract_last_word_with_punctuation_marks(comp: &[Transformation]) -> usize {
     for i in (0..comp.len()).rev() {
-        let c = canvas(&comp[i..], Mode::ENGLISH);
-        if c.is_empty() {
+        let Some(c0) = first_char(&comp[i..], Mode::ENGLISH) else {
             continue;
-        }
-        if is_space(c[0]) {
+        };
+        if is_space(c0) {
             if i == comp.len() - 1 {
                 return comp.len();
             }
@@ -376,11 +374,12 @@ fn find_mark_target(comp: &[Transformation], rules: &[Rule]) -> (Option<TransId>
             }
             if trans.rule.result == rule.effect_on && rule.effect > 0 {
                 let target = find_root_target(comp, trans.id);
-                let mut probe = comp.to_vec();
-                probe.push(temp_effect(Some(target), rule.clone()));
-                if str == flatten(&probe, Mode::VIETNAMESE) {
+                let extra = temp_effect(Some(target), rule.clone());
+                if str == flatten_with_extra(comp, &extra, Mode::VIETNAMESE) {
                     continue;
                 }
+                let mut probe = comp.to_vec();
+                probe.push(extra);
                 if is_valid(&probe, false) {
                     return (Some(target), rule.clone());
                 }
@@ -401,9 +400,8 @@ fn find_target(
             continue;
         }
         let mut target = tone_target_for(comp, rule, flags);
-        let mut probe = comp.to_vec();
-        probe.push(temp_effect(target, rule.clone()));
-        if str == flatten(&probe, Mode::VIETNAMESE) {
+        let extra = temp_effect(target, rule.clone());
+        if str == flatten_with_extra(comp, &extra, Mode::VIETNAMESE) {
             continue;
         }
         if Tone::try_from(rule.effect).unwrap_or_default() == Tone::None
@@ -472,10 +470,13 @@ fn generate_undo_transformations(
                             effect: 0,
                             ..Default::default()
                         };
-                        let mut probe = comp.to_vec();
-                        probe.push(temp_effect(Some(target), probe_rule.clone()));
+                        let extra = temp_effect(Some(target), probe_rule.clone());
                         if str
-                            == flatten(&probe, Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE)
+                            == flatten_with_extra(
+                                comp,
+                                &extra,
+                                Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE,
+                            )
                         {
                             continue;
                         }
