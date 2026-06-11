@@ -58,7 +58,17 @@ This is a Cargo workspace:
 | `ibus-zbus` | Engine-side IBus binding on zbus. |
 | `ibus-bambusa` | The IBus engine binary. |
 
-## Building
+## Installation
+
+For Fedora 44 or newer:
+
+```sh
+sudo dnf copr enable tle/vietnam
+sudo dnf update
+sudo dnf install ibus-bambusa
+```
+
+## Building from source
 
 Requires Rust 1.96.0 (pinned via `rust-toolchain.toml`) and IBus. Installing
 additionally needs Meson and Ninja.
