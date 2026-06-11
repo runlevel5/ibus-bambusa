@@ -59,7 +59,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "bambusa-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bambusa-core",
  "bitflags",
@@ -68,7 +68,7 @@ dependencies = [
 
 [[package]]
 name = "bambusa-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bitflags",
  "regex",
@@ -638,7 +638,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "ibus-bambusa"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bambusa-config",
  "bambusa-core",
@@ -650,7 +650,7 @@ dependencies = [
 
 [[package]]
 name = "ibus-bambusa-setup"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bambusa-config",
  "bambusa-core",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "ibus-zbus"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "tokio",
