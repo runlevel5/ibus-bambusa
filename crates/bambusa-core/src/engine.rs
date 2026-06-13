@@ -176,8 +176,11 @@ impl BambusaEngine {
             is_upper,
         );
         // Build the `composition + transformations` view once and reuse it for
-        // both the uow shortcut probe and the tone refresh.
-        let mut combined = composition.to_vec();
+        // both the uow shortcut probe and the tone refresh. Reserve up front so
+        // appending the generated transformations never reallocates (a fallback
+        // yields a handful, plus at most one virtual uow transformation).
+        let mut combined = Vec::with_capacity(composition.len() + transformations.len().max(2) + 1);
+        combined.extend_from_slice(composition);
         if transformations.is_empty() {
             transformations =
                 generate_fallback_transformations(&mut self.ids, rules, key, is_upper);

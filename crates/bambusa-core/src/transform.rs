@@ -215,12 +215,14 @@ fn find_tone_target_in(
 ) -> Option<TransId> {
     let lc_empty = split.lc().is_empty();
     // The vowel appenders only (matching the historical `filter_appending`).
-    let vowels: Vec<usize> = split
-        .vo()
-        .iter()
-        .copied()
-        .filter(|&i| comp[i].rule.effect_type == EffectType::Appending)
-        .collect();
+    let mut vowels: Vec<usize> = Vec::with_capacity(split.vo().len());
+    vowels.extend(
+        split
+            .vo()
+            .iter()
+            .copied()
+            .filter(|&i| comp[i].rule.effect_type == EffectType::Appending),
+    );
     let mark_mode = Mode::ENGLISH | Mode::LOWERCASE | Mode::TONELESS | Mode::MARKLESS;
     match vowels.len() {
         1 => Some(comp[vowels[0]].id),
@@ -328,12 +330,13 @@ fn atomic_split_idx(
 
 /// Partition the appending transformations of `comp` into the CVC groups.
 fn cvc_split(comp: &[Transformation]) -> CvcSplit {
-    let appenders: Vec<usize> = comp
-        .iter()
-        .enumerate()
-        .filter(|(_, t)| t.target.is_none())
-        .map(|(i, _)| i)
-        .collect();
+    let mut appenders: Vec<usize> = Vec::with_capacity(comp.len());
+    appenders.extend(
+        comp.iter()
+            .enumerate()
+            .filter(|(_, t)| t.target.is_none())
+            .map(|(i, _)| i),
+    );
     let n = appenders.len();
     let head_split = atomic_split_idx(comp, &appenders, n, false);
     let fc_split = atomic_split_idx(comp, &appenders, head_split, true);
