@@ -819,12 +819,7 @@ mod tests {
         for ch in keys.chars() {
             let lower = to_lower(ch);
             let is_upper = ch.is_uppercase();
-            let applicable: Vec<Rule> = im
-                .rules
-                .iter()
-                .filter(|r| r.key == lower)
-                .cloned()
-                .collect();
+            let applicable = im.rules_for_key(lower);
 
             // Mirror BambusaEngine::new_composition for the last syllable.
             let syl_split = extract_last_syllable(&comp);
@@ -832,10 +827,10 @@ mod tests {
             let mut syllable = comp[syl_split..].to_vec();
 
             let mut generated =
-                generate_transformations(&mut ids, &syllable, &applicable, flags, lower, is_upper);
+                generate_transformations(&mut ids, &syllable, applicable, flags, lower, is_upper);
             if generated.is_empty() {
                 generated =
-                    generate_fallback_transformations(&mut ids, &applicable, lower, is_upper);
+                    generate_fallback_transformations(&mut ids, applicable, lower, is_upper);
             }
             let mut combined = syllable.clone();
             combined.extend(generated.iter().cloned());

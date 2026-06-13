@@ -453,16 +453,26 @@ impl PreeditHandler {
 /// Common-prefix diff: the differing suffix of `new`, and how many trailing
 /// characters of `old` to delete to reach it.
 fn offset_runes<'a>(new: &'a str, old: &str) -> (&'a str, u32) {
-    let new_chars: Vec<char> = new.chars().collect();
-    let old_chars: Vec<char> = old.chars().collect();
-    let min = new_chars.len().min(old_chars.len());
-    let mut offset = 0;
-    while offset < min && new_chars[offset] == old_chars[offset] {
-        offset += 1;
+    // Walk both char streams in lockstep over their common prefix, without
+    // collecting either into a `Vec<char>`. `split` is the byte offset in `new`
+    // where the differing suffix begins; `matched` counts the shared prefix runes.
+    let mut new_it = new.char_indices();
+    let mut old_it = old.chars();
+    let mut split = new.len();
+    let mut matched = 0;
+    loop {
+        match (new_it.next(), old_it.next()) {
+            (Some((_, nc)), Some(oc)) if nc == oc => matched += 1,
+            (Some((i, _)), _) => {
+                split = i;
+                break;
+            }
+            (None, _) => break,
+        }
     }
-    let n_backspace = (old_chars.len() - offset) as u32;
-    let byte_offset = new.char_indices().nth(offset).map_or(new.len(), |(i, _)| i);
-    (&new[byte_offset..], n_backspace)
+    // Every `old` rune past the common prefix must be deleted to reach `new`.
+    let n_backspace = (old.chars().count() - matched) as u32;
+    (&new[split..], n_backspace)
 }
 
 /// Build the macro table for a config: the configured pairs when macros are
