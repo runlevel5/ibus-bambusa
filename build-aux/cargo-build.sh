@@ -11,12 +11,14 @@ OUTPUT="$3"        # where meson wants the built binary
 PROFILE="$4"       # "release" or "debug"
 BIN="$5"           # binary (and target subdir) name
 
+# --locked enforces the committed Cargo.lock, so a packaging build cannot
+# silently resolve different dependency versions than were reviewed.
 if [ "$PROFILE" = "release" ]; then
-    cargo build --manifest-path "$SOURCE_ROOT/Cargo.toml" \
+    cargo build --locked --manifest-path "$SOURCE_ROOT/Cargo.toml" \
         --target-dir "$TARGET_DIR" --release --bin "$BIN"
     cp "$TARGET_DIR/release/$BIN" "$OUTPUT"
 else
-    cargo build --manifest-path "$SOURCE_ROOT/Cargo.toml" \
+    cargo build --locked --manifest-path "$SOURCE_ROOT/Cargo.toml" \
         --target-dir "$TARGET_DIR" --bin "$BIN"
     cp "$TARGET_DIR/debug/$BIN" "$OUTPUT"
 fi

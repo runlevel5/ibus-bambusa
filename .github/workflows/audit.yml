@@ -4,6 +4,10 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+  # Re-run daily so a newly published advisory against an already-pinned
+  # dependency is caught even when the manifests have not changed.
+  schedule:
+    - cron: '0 6 * * *'
 
 jobs:
   security_audit:

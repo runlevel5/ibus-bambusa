@@ -110,9 +110,14 @@ pub(crate) fn find_tone_from_char(chr: char) -> Tone {
 pub(crate) fn add_tone_to_char(chr: char, tone: u8) -> char {
     match find_vowel_position(chr) {
         Some(pos) => {
-            let current_tone = (pos % 6) as isize;
-            let offset = tone as isize - current_tone;
-            VOWELS[(pos as isize + offset) as usize]
+            // Each vowel sits in a 6-entry tone group; the target is the same
+            // group's slot for `tone`. Clamp the tone and use a checked lookup so
+            // an out-of-range `effect` byte can never index out of bounds.
+            let base = pos - pos % 6;
+            VOWELS
+                .get(base + tone.min(5) as usize)
+                .copied()
+                .unwrap_or(chr)
         }
         None => chr,
     }

@@ -266,7 +266,11 @@ pub fn build_input_method(name: &str, definition: &[(&str, &str)]) -> InputMetho
         ..Default::default()
     };
     for (key_str, line) in definition {
-        let key = key_str.chars().next().expect("definition key is non-empty");
+        // Skip empty-key pairs rather than panicking: built-in layouts never
+        // have them, but a caller-supplied (e.g. config-loaded) definition might.
+        let Some(key) = key_str.chars().next() else {
+            continue;
+        };
         im.rules.extend(parse_rules(key, line));
         if line.to_lowercase().contains("uo") {
             im.super_keys.push(key);

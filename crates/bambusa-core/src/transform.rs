@@ -119,10 +119,14 @@ fn generate_appending_trans(
 }
 
 fn find_root_target(comp: &[Transformation], id: TransId) -> TransId {
-    match by_id(comp, id).and_then(|t| t.target) {
-        Some(parent) => find_root_target(comp, parent),
-        None => id,
+    // Walk the target chain to its root iteratively; targets always point at an
+    // earlier transformation, so the chain is finite, but the loop avoids any
+    // unbounded recursion regardless.
+    let mut id = id;
+    while let Some(parent) = by_id(comp, id).and_then(|t| t.target) {
+        id = parent;
     }
+    id
 }
 
 /// Whether the composition forms a spellable (possibly partial) syllable.
