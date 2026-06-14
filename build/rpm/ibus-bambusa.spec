@@ -1,5 +1,5 @@
 Name:           ibus-bambusa
-Version:        0.3.0
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        Vietnamese input method engine for GNOME (Wayland)
 
@@ -59,6 +59,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/ibus-setup-bambusa.de
 %{_datadir}/glib-2.0/schemas/org.freedesktop.IBus.bambusa.gschema.xml
 
 %changelog
+* Sun Jun 14 2026 Trung Lê <8@tle.id.au> - 0.4.0-1
+- Unregister engine objects on destroy (fixes a per-context object-server leak)
+  and cap concurrently live engines.
+
 * Sun Jun 14 2026 Trung Lê <8@tle.id.au> - 0.3.0-1
 - Reduce per-keystroke allocations in the compose engine (zero-copy rule
   lookup, scratch-buffer reuse, pre-sized buffers).
