@@ -128,17 +128,24 @@ fn find_root_target(comp: &[Transformation], id: TransId) -> TransId {
 /// Whether the composition forms a spellable (possibly partial) syllable.
 pub(crate) fn is_valid(comp: &[Transformation], input_is_full_complete: bool) -> bool {
     let mut buf = String::new();
-    is_valid_buf(comp, input_is_full_complete, &mut buf)
+    let mut idx = Vec::new();
+    is_valid_buf(comp, input_is_full_complete, &mut buf, &mut idx)
 }
 
-/// As [`is_valid`], but reusing a caller-owned scratch buffer so a hot loop
-/// (e.g. [`extract_last_syllable`]) allocates once instead of per call.
-fn is_valid_buf(comp: &[Transformation], input_is_full_complete: bool, buf: &mut String) -> bool {
+/// As [`is_valid`], but reusing caller-owned scratch buffers (a string and the
+/// CVC index list) so a hot loop (e.g. [`extract_last_syllable`]) allocates once
+/// instead of per call.
+fn is_valid_buf(
+    comp: &[Transformation],
+    input_is_full_complete: bool,
+    buf: &mut String,
+    idx: &mut Vec<usize>,
+) -> bool {
     if comp.len() <= 1 {
         return true;
     }
     // Reuse a single CVC split for both the tone check and the spelling check.
-    let split = cvc_split(comp);
+    let split = cvc_split(comp, idx);
     // The most recent tone must be compatible with the final consonant.
     for trans in comp.iter().rev() {
         if trans.rule.effect_type == EffectType::ToneTransformation {
@@ -163,7 +170,8 @@ fn has_valid_tone(comp: &[Transformation], tone: Tone) -> bool {
     if tone == Tone::None || tone == Tone::Acute || tone == Tone::Dot {
         return true;
     }
-    let split = cvc_split(comp);
+    let mut idx = Vec::new();
+    let split = cvc_split(comp, &mut idx);
     let mut buf = String::new();
     tone_compatible_with_lc(comp, split.lc(), tone, &mut buf)
 }
@@ -203,14 +211,15 @@ fn find_tone_target(comp: &[Transformation], std_style: bool) -> Option<TransId>
     if comp.is_empty() {
         return None;
     }
-    let split = cvc_split(comp);
+    let mut idx = Vec::new();
+    let split = cvc_split(comp, &mut idx);
     find_tone_target_in(comp, &split, std_style)
 }
 
 /// As [`find_tone_target`], but reusing a CVC split the caller already computed.
 fn find_tone_target_in(
     comp: &[Transformation],
-    split: &CvcSplit,
+    split: &CvcSplit<'_>,
     std_style: bool,
 ) -> Option<TransId> {
     let lc_empty = split.lc().is_empty();
@@ -284,13 +293,13 @@ fn find_tone_target_in(
 /// `appenders` holds the indices (into the source composition) of the appending
 /// transformations, in order; the two boundaries partition them so a caller can
 /// inspect or flatten a group by index without cloning any transformation.
-struct CvcSplit {
-    appenders: Vec<usize>,
+struct CvcSplit<'a> {
+    appenders: &'a [usize],
     fc_end: usize,
     vo_end: usize,
 }
 
-impl CvcSplit {
+impl CvcSplit<'_> {
     /// Indices of the first-consonant appenders.
     fn fc(&self) -> &[usize] {
         &self.appenders[..self.fc_end]
@@ -329,17 +338,22 @@ fn atomic_split_idx(
 }
 
 /// Partition the appending transformations of `comp` into the CVC groups.
-fn cvc_split(comp: &[Transformation]) -> CvcSplit {
-    let mut appenders: Vec<usize> = Vec::with_capacity(comp.len());
-    appenders.extend(
+///
+/// The appender index list is built into `buf` (cleared first) and borrowed by
+/// the returned split, so a hot loop (e.g. [`extract_last_syllable`]) reuses one
+/// allocation across many calls instead of allocating per call.
+fn cvc_split<'a>(comp: &[Transformation], buf: &'a mut Vec<usize>) -> CvcSplit<'a> {
+    buf.clear();
+    buf.extend(
         comp.iter()
             .enumerate()
             .filter(|(_, t)| t.target.is_none())
             .map(|(i, _)| i),
     );
+    let appenders: &[usize] = buf;
     let n = appenders.len();
-    let head_split = atomic_split_idx(comp, &appenders, n, false);
-    let fc_split = atomic_split_idx(comp, &appenders, head_split, true);
+    let head_split = atomic_split_idx(comp, appenders, n, false);
+    let fc_split = atomic_split_idx(comp, appenders, head_split, true);
     let mut fc_end = fc_split;
     let mut vo_end = head_split;
 
@@ -396,7 +410,8 @@ fn extract_cvc_trans(
     Vec<Transformation>,
     Vec<Transformation>,
 ) {
-    let split = cvc_split(comp);
+    let mut idx = Vec::new();
+    let split = cvc_split(comp, &mut idx);
     (
         materialize_group(comp, split.fc()),
         materialize_group(comp, split.vo()),
@@ -460,8 +475,9 @@ pub(crate) fn extract_last_syllable(comp: &[Transformation]) -> usize {
     let last = &comp[word_split..];
     let mut anchor = 0;
     let mut buf = String::new();
+    let mut idx = Vec::new();
     for i in 0..last.len() {
-        if !is_valid_buf(&last[anchor..=i], false, &mut buf) {
+        if !is_valid_buf(&last[anchor..=i], false, &mut buf, &mut idx) {
             anchor = i;
         }
     }
@@ -669,7 +685,8 @@ pub(crate) fn generate_transformations(
     // undo pass below.
     let toneless = flatten(comp, Mode::VIETNAMESE | Mode::TONELESS | Mode::LOWERCASE);
     if REG_UH_O.is_match(&toneless) {
-        let split = cvc_split(comp);
+        let mut idx = Vec::new();
+        let split = cvc_split(comp, &mut idx);
         let first_vowel = split
             .vo()
             .iter()
@@ -763,7 +780,8 @@ pub(crate) fn refresh_last_tone_target(
     let Some(lt_idx) = get_last_tone_transformation(comp) else {
         return (Vec::new(), None);
     };
-    let split = cvc_split(comp);
+    let mut idx = Vec::new();
+    let split = cvc_split(comp, &mut idx);
     if split.vo().is_empty() {
         return (Vec::new(), None);
     }
