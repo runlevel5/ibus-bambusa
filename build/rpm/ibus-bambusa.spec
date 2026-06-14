@@ -1,5 +1,5 @@
 Name:           ibus-bambusa
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Vietnamese input method engine for GNOME (Wayland)
 
@@ -59,6 +59,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/ibus-setup-bambusa.de
 %{_datadir}/glib-2.0/schemas/org.freedesktop.IBus.bambusa.gschema.xml
 
 %changelog
+* Sun Jun 14 2026 Trung Lê <8@tle.id.au> - 0.3.0-1
+- Reduce per-keystroke allocations in the compose engine (zero-copy rule
+  lookup, scratch-buffer reuse, pre-sized buffers).
+
 * Fri Jun 12 2026 Trung Lê <8@tle.id.au> - 0.2.0-1
 - Add libadwaita preferences GUI and its setup desktop entry.
 - Add dictionary-based spell-check and text macros.
