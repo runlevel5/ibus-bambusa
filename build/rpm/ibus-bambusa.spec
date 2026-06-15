@@ -12,8 +12,10 @@ Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  meson >= 0.61
 BuildRequires:  gcc
-BuildRequires:  cargo >= 1.96.0
-BuildRequires:  rust >= 1.96.0
+# Provides %%cargo_prep / %%cargo_generate_buildrequires; pulls in cargo + rust.
+# The Rust dependencies are taken from Fedora's packaged crates (vendored in
+# /usr/share/cargo/registry) rather than fetched from crates.io.
+BuildRequires:  cargo-rpm-macros >= 26
 BuildRequires:  gettext
 BuildRequires:  desktop-file-utils
 BuildRequires:  pkgconfig(gtk4)
@@ -30,8 +32,19 @@ charset, spelling validation, text macros and a libadwaita preferences GUI.
 
 %prep
 %autosetup
+# Point cargo at the system crate registry (/usr/share/cargo/registry), build
+# offline, and drop the upstream Cargo.lock so deps resolve to Fedora's crates.
+%cargo_prep
+
+# Emit BuildRequires for our crate dependencies from Cargo.toml; RPM dependency
+# resolution then pulls the full transitive rust-*-devel set.
+%generate_buildrequires
+%cargo_generate_buildrequires
 
 %build
+# cargo-build.sh keys off this to build --offline (no --locked) against the
+# registry %%cargo_prep configured, instead of fetching the pinned lock.
+export CARGO_NET_OFFLINE=true
 %meson
 %meson_build
 

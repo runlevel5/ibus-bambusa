@@ -11,12 +11,25 @@ OUTPUT="$3"        # where meson wants the built binary
 PROFILE="$4"       # "release" or "debug"
 BIN="$5"           # binary (and target subdir) name
 
+# Dependency-source mode:
+#  - Distro/RPM builds export CARGO_NET_OFFLINE=true after `%cargo_prep`, which
+#    redirects cargo to the system crate registry (/usr/share/cargo/registry)
+#    and removes Cargo.lock; resolve offline against it, so --locked must NOT be
+#    passed (the pinned lock no longer applies).
+#  - Plain/dev builds fetch from crates.io and enforce the committed Cargo.lock
+#    so they cannot silently resolve unreviewed dependency versions.
+if [ "${CARGO_NET_OFFLINE:-false}" = "true" ]; then
+    NET_ARGS="--offline"
+else
+    NET_ARGS="--locked"
+fi
+
 if [ "$PROFILE" = "release" ]; then
-    cargo build --manifest-path "$SOURCE_ROOT/Cargo.toml" \
+    cargo build $NET_ARGS --manifest-path "$SOURCE_ROOT/Cargo.toml" \
         --target-dir "$TARGET_DIR" --release --bin "$BIN"
     cp "$TARGET_DIR/release/$BIN" "$OUTPUT"
 else
-    cargo build --manifest-path "$SOURCE_ROOT/Cargo.toml" \
+    cargo build $NET_ARGS --manifest-path "$SOURCE_ROOT/Cargo.toml" \
         --target-dir "$TARGET_DIR" --bin "$BIN"
     cp "$TARGET_DIR/debug/$BIN" "$OUTPUT"
 fi
