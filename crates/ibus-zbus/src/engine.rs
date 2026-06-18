@@ -7,8 +7,9 @@
 //! processing one command to completion before the next.
 
 use tokio::sync::{mpsc, oneshot};
+use zbus::Connection;
 use zbus::object_server::SignalEmitter;
-use zvariant::{OwnedValue, Value};
+use zvariant::{OwnedObjectPath, OwnedValue, Value};
 
 use crate::consts::PREEDIT_COMMIT;
 use crate::handler::{Action, EngineHandler};
@@ -52,6 +53,13 @@ enum Cmd {
 struct Actor {
     handler: Box<dyn EngineHandler>,
     emitter: SignalEmitter<'static>,
+    /// This engine's connection and object path, used to unregister itself when
+    /// the engine is destroyed (so the `ObjectServer` entry does not leak).
+    conn: Connection,
+    path: OwnedObjectPath,
+    /// Held only for its `Drop`: releases the factory's live-engine slot when the
+    /// actor task ends (clean destroy, channel close, or panic).
+    _live: Box<dyn Send>,
 }
 
 impl Actor {
@@ -100,6 +108,16 @@ impl Actor {
                 Cmd::Destroy => break,
             }
         }
+        // The engine was destroyed (or every command sender was dropped):
+        // unregister this object so its ObjectServer entry doesn't leak for the
+        // process lifetime. This runs in the actor task, not inside the `destroy`
+        // method handler, so it can't deadlock on the interface lock. `_live`
+        // drops with `self`, releasing the factory's live-engine slot.
+        let _ = self
+            .conn
+            .object_server()
+            .remove::<EngineInterface, _>(self.path.clone())
+            .await;
     }
 
     async fn emit_handler(&mut self, f: impl FnOnce(&mut dyn EngineHandler) -> Vec<Action>) {
@@ -180,9 +198,18 @@ impl EngineInterface {
     pub fn new(
         handler: Box<dyn EngineHandler>,
         emitter: SignalEmitter<'static>,
+        conn: Connection,
+        path: OwnedObjectPath,
+        live: Box<dyn Send>,
     ) -> (Self, impl std::future::Future<Output = ()>) {
         let (tx, rx) = mpsc::channel(64);
-        let actor = Actor { handler, emitter };
+        let actor = Actor {
+            handler,
+            emitter,
+            conn,
+            path,
+            _live: live,
+        };
         (Self { cmds: tx }, actor.run(rx))
     }
 

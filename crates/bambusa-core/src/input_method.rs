@@ -1,6 +1,8 @@
 //! The built-in input-method layouts and the builder that compiles a
 //! definition into an [`InputMethod`].
 
+use std::collections::HashMap;
+
 use crate::parser::parse_rules;
 use crate::rules::{EffectType, Rule};
 
@@ -10,6 +12,10 @@ use crate::rules::{EffectType, Rule};
 pub struct InputMethod {
     pub name: String,
     pub rules: Vec<Rule>,
+    /// `rules` grouped by their trigger key, so the engine can fetch a key's
+    /// rules per keystroke as a borrowed slice instead of filter-and-cloning the
+    /// flat list into a fresh `Vec` every time.
+    rules_by_key: HashMap<char, Vec<Rule>>,
     /// Keys whose definition involves the `uo` cluster (drive the `uow`
     /// shortcut).
     pub super_keys: Vec<char>,
@@ -19,6 +25,14 @@ pub struct InputMethod {
     pub appending_keys: Vec<char>,
     /// Every key the method binds.
     pub keys: Vec<char>,
+}
+
+impl InputMethod {
+    /// The rules triggered by `key` (already lowercased by the caller), as a
+    /// borrowed slice — empty if the key binds nothing.
+    pub fn rules_for_key(&self, key: char) -> &[Rule] {
+        self.rules_by_key.get(&key).map_or(&[], Vec::as_slice)
+    }
 }
 
 type Definition = (&'static str, &'static [(&'static str, &'static str)]);
@@ -252,7 +266,11 @@ pub fn build_input_method(name: &str, definition: &[(&str, &str)]) -> InputMetho
         ..Default::default()
     };
     for (key_str, line) in definition {
-        let key = key_str.chars().next().expect("definition key is non-empty");
+        // Skip empty-key pairs rather than panicking: built-in layouts never
+        // have them, but a caller-supplied (e.g. config-loaded) definition might.
+        let Some(key) = key_str.chars().next() else {
+            continue;
+        };
         im.rules.extend(parse_rules(key, line));
         if line.to_lowercase().contains("uo") {
             im.super_keys.push(key);
@@ -265,6 +283,10 @@ pub fn build_input_method(name: &str, definition: &[(&str, &str)]) -> InputMetho
             EffectType::ToneTransformation => im.tone_keys.push(rule.key),
             _ => {}
         }
+        im.rules_by_key
+            .entry(rule.key)
+            .or_default()
+            .push(rule.clone());
     }
     im
 }

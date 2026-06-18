@@ -3,7 +3,6 @@
 use crate::flatten::flatten;
 use crate::input_method::InputMethod;
 use crate::mode::{EngineFlags, Mode};
-use crate::rules::Rule;
 use crate::transform::{
     IdGen, Retarget, Transformation, break_composition, by_id, extract_last_syllable,
     extract_last_word, extract_last_word_with_punctuation_marks, find_last_appending_trans,
@@ -143,16 +142,6 @@ impl BambusaEngine {
         self.composition = result;
     }
 
-    fn applicable_rules(&self, key: char) -> Vec<Rule> {
-        let lower = to_lower(key);
-        self.input_method
-            .rules
-            .iter()
-            .filter(|r| r.key == lower)
-            .cloned()
-            .collect()
-    }
-
     fn new_composition(
         &mut self,
         mut composition: Vec<Transformation>,
@@ -177,26 +166,32 @@ impl BambusaEngine {
         key: char,
         is_upper: bool,
     ) -> (Vec<Transformation>, Option<Retarget>) {
-        let rules = self.applicable_rules(key);
+        let rules = self.input_method.rules_for_key(to_lower(key));
         let mut transformations = generate_transformations(
             &mut self.ids,
             composition,
-            &rules,
+            rules,
             self.flags,
             key,
             is_upper,
         );
+        // Build the `composition + transformations` view once and reuse it for
+        // both the uow shortcut probe and the tone refresh. Reserve up front so
+        // appending the generated transformations never reallocates (a fallback
+        // yields a handful, plus at most one virtual uow transformation).
+        let mut combined = Vec::with_capacity(composition.len() + transformations.len().max(2) + 1);
+        combined.extend_from_slice(composition);
         if transformations.is_empty() {
             transformations =
-                generate_fallback_transformations(&mut self.ids, &rules, key, is_upper);
-            let mut new_comp = composition.to_vec();
-            new_comp.extend(transformations.iter().cloned());
-            if let Some(virtual_trans) = self.apply_uow_shortcut(&new_comp) {
-                transformations.push(virtual_trans);
+                generate_fallback_transformations(&mut self.ids, rules, key, is_upper);
+            combined.extend(transformations.iter().cloned());
+            if let Some(virtual_trans) = self.apply_uow_shortcut(&combined) {
+                transformations.push(virtual_trans.clone());
+                combined.push(virtual_trans);
             }
+        } else {
+            combined.extend(transformations.iter().cloned());
         }
-        let mut combined = composition.to_vec();
-        combined.extend(transformations.iter().cloned());
         let (refresh, retarget) = self.refresh_tone(&combined);
         transformations.extend(refresh);
         (transformations, retarget)
@@ -209,8 +204,8 @@ impl BambusaEngine {
         if !matches_uoh_tail(&str) {
             return None;
         }
-        let rules = self.applicable_rules(super_key);
-        let (target, mut missing_rule) = find_target_by_rules(composition, &rules, self.flags);
+        let rules = self.input_method.rules_for_key(to_lower(super_key));
+        let (target, mut missing_rule) = find_target_by_rules(composition, rules, self.flags);
         let target_id = target?;
         missing_rule.key = '\0';
         Some(Transformation {
