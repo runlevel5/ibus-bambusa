@@ -167,14 +167,8 @@ impl BambusaEngine {
         is_upper: bool,
     ) -> (Vec<Transformation>, Option<Retarget>) {
         let rules = self.input_method.rules_for_key(to_lower(key));
-        let mut transformations = generate_transformations(
-            &mut self.ids,
-            composition,
-            rules,
-            self.flags,
-            key,
-            is_upper,
-        );
+        let mut transformations =
+            generate_transformations(&mut self.ids, composition, rules, self.flags, key, is_upper);
         // Build the `composition + transformations` view once and reuse it for
         // both the uow shortcut probe and the tone refresh. Reserve up front so
         // appending the generated transformations never reallocates (a fallback
