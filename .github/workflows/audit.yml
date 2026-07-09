@@ -13,6 +13,12 @@ jobs:
   security_audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    # rustsec/audit-check publishes its findings via the Checks API, so the
+    # job token needs checks:write. Declaring the block explicitly also stops
+    # the run failing when the repo default GITHUB_TOKEN is read-only.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
