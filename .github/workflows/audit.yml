@@ -9,6 +9,9 @@ on:
   schedule:
     - cron: '0 6 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   security_audit:
     name: Security Audit

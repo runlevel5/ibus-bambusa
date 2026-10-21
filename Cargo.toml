@@ -16,7 +16,7 @@ license = "GPL-3.0-or-later"
 authors = ["Trung Lê <8@tle.id.au>"]
 repository = "https://github.com/runlevel5/ibus-bambusa"
 # Fedora RPM packaging lives in-tree but isn't part of the published crate.
-exclude = ["/build", "/build-aux", "/.copr"]
+exclude = ["/build", "/build-aux"]
 
 [workspace.dependencies]
 bitflags = "2"

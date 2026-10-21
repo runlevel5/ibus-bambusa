@@ -63,7 +63,7 @@ This is a Cargo workspace:
 For Fedora 44 or newer:
 
 ```sh
-sudo dnf copr enable tle/vietnam
+sudo dnf copr enable tle/power
 sudo dnf update
 sudo dnf install ibus-bambusa
 ```
